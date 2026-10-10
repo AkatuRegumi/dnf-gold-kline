@@ -101,10 +101,13 @@ def summarize(rows: list[dict]) -> dict:
     }
 
 
-def append_history(history: dict, sample: dict) -> dict:
+def append_history(history: dict, sample: dict, region_id: str = "kua2") -> dict:
+    """Append without ever mixing markets or overwriting earlier observations."""
     items = history.get("samples", [])
-    if not isinstance(items, list):
-        raise ValueError("历史行情 schema 无效")
+    if not isinstance(items, list) or history.get("region", region_id) != region_id:
+        raise ValueError("历史行情 schema 或跨区不匹配")
+    if sample.get("region", region_id) != region_id:
+        raise ValueError("新快照跨区与历史文件不匹配")
     if items and sample["observed_at"] <= items[-1]["observed_at"]:
         raise ValueError("新快照必须晚于上一条")
-    return {"schema_version": 1, "region": "kua2", "samples": items + [sample]}
+    return {"schema_version": 1, "region": region_id, "samples": items + [sample]}

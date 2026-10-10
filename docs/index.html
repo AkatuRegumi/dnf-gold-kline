@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>DNF Gold Kline | 国服跨二金币行情</title>
+<title>DNF Gold Kline | 国服全跨区金币行情</title>
 <style>
 :root{color-scheme:dark;--bg:#0b1120;--panel:#162235;--line:#293951;--text:#edf3ff;--muted:#9aafc6;--up:#42d9a4;--down:#ff6e81;--blue:#8db8ff}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#11263d,var(--bg) 45%);color:var(--text);font:15px/1.55 system-ui,"Microsoft YaHei",sans-serif}
@@ -16,14 +16,15 @@ small,.sub,.muted{color:var(--muted)}.sub{margin:6px 0 26px}
 button[aria-pressed="true"]{background:#25574f;color:#91f5d1;border-color:#347d71}
 canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .info{border-bottom:1px solid var(--line);padding:10px 0}.info:last-child{border:0}.info strong{display:block;font-size:18px}
-.note{margin-top:13px}footer{color:var(--muted);font-size:12px;margin-top:25px}
+.note{margin-top:13px}.region-control{display:flex;align-items:center;gap:9px;margin:0 0 18px;flex-wrap:wrap}.region-control label{color:var(--muted)}.region-control select{color:var(--text);background:#1a2b42;border:1px solid #45627b;border-radius:9px;padding:9px 28px 9px 12px;font:inherit;cursor:pointer}.region-control select:focus{outline:2px solid var(--blue)}footer{color:var(--muted);font-size:12px;margin-top:25px}
 @media(max-width:830px){.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}
 @media(max-width:500px){main{padding:18px 12px 40px}.stat strong{font-size:21px}.panel{padding:13px}h1{font-size:23px}canvas{height:290px}}
 </style>
 </head>
 <body><main>
 <h1><b>◆</b> DNF GOLD KLINE</h1>
-<div class="sub">国服跨二区（湖南／湖北）· 公开挂牌报价 · 非官方开源研究项目</div>
+<div class="sub">国服全九跨区 · 独立历史报价 · 非官方开源研究项目</div>
+<div class="region-control"><label for="region-select">选择跨区</label><select id="region-select" aria-label="选择国服跨区"><option value="kua2">跨二</option></select><small id="region-note">每个跨区独立积累数据</small></div>
 <div class="stats">
 <div class="panel stat"><small>最高挂牌比例</small><strong id="best">—</strong><small>万金币 / 1 元</small></div>
 <div class="panel stat"><small>买 3 亿综合比例</small><strong id="d3">—</strong><small>挂牌库存估算</small></div>
@@ -31,12 +32,12 @@ canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--mut
 <div class="panel stat"><small>买 12 亿综合比例</small><strong id="d12">—</strong><small>挂牌库存估算</small></div>
 </div>
 <div class="layout">
-<section class="panel"><div class="top"><div><h2>跨二金币报价 K 线</h2><small>每元换到的金币越多，表示金币越便宜。无采样不补造。</small></div>
+<section class="panel"><div class="top"><div><h2 id="chart-title">跨二金币报价 K 线</h2><small>每元换到的金币越多，表示金币越便宜。无采样不补造。</small></div>
 <div class="buttons" id="period"><button data-kind="day" aria-pressed="true">日 K</button><button data-kind="week" aria-pressed="false">周 K</button><button data-kind="month" aria-pressed="false">月 K</button></div></div>
 <canvas id="chart" role="img" aria-label="金币报价日线周线月线图"></canvas>
-<div id="tip">等待真实报价数据。</div><small>仅纳入成功通道 ≥3 且有效报价 ≥10 条的快照计算 K 线。覆盖不足的真实记录仍保留在数据文件中，不参与走势图。</small></section>
+<div id="tip">等待真实报价数据。</div><small>仅采用满足最低有效来源门槛（至少两个通道、五条挂单）的快照形成 K 线；覆盖不足的真实记录仍保留，不参与绘图。这不是全市场覆盖率保证。</small></section>
 <aside class="panel"><h2>行情元信息</h2>
-<div class="info"><small>数据来源</small><strong><a href="https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2" target="_blank" rel="noopener">游戏达人跨二比价 ↗</a></strong></div>
+<div class="info"><small>数据来源</small><strong><a id="market-link" href="https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2" target="_blank" rel="noopener">游戏达人跨二比价 ↗</a></strong></div>
 <div class="info"><small>最后成功采样（北京时间）</small><strong id="time">—</strong></div>
 <div class="info"><small>累计快照</small><strong id="count">0</strong></div>
 <div class="info"><small>有效挂单／成功通道</small><strong id="source">—</strong></div>
@@ -47,7 +48,7 @@ canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--mut
 </main>
 <script>
 "use strict";
-let samples=[],kind="day";
+let samples=[],kind="day",activeRegion="kua2",availableRegions=[],loadVersion=0;
 const get=id=>document.getElementById(id);
 const localDate=stamp=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(stamp));
 function key(stamp){
@@ -63,7 +64,7 @@ function build(){
  for(const s of samples){
    const ratio=Number(s.best_ratio);
    // Low-coverage observations stay in history but do not distort the plotted K line.
-   const reliable=(s.quality==="usable")||(s.quality==null&&s.successful_channels>=3&&s.offers_count>=10);
+   const reliable=(s.quality==="usable")||(s.quality==null&&s.successful_channels>=2&&s.offers_count>=5);
    if(!reliable||!Number.isFinite(ratio)||ratio<=0)continue;
    const k=key(s.observed_at);
    if(!groups.has(k))groups.set(k,[]);
@@ -97,27 +98,89 @@ function render(){
  tip.textContent=last.date+" 开 "+last.open.toFixed(2)+" / 高 "+last.high.toFixed(2)+" / 低 "+last.low.toFixed(2)+" / 收 "+last.close.toFixed(2)+" 万/元 · "+last.n+" 次采样";
  canvas.onmousemove=function(ev){const r=canvas.getBoundingClientRect(),idx=Math.max(0,Math.min(data.length-1,Math.floor((ev.clientX-r.left-left)/step))),d=data[idx];tip.textContent=d.date+" 开 "+d.open.toFixed(2)+" / 高 "+d.high.toFixed(2)+" / 低 "+d.low.toFixed(2)+" / 收 "+d.close.toFixed(2)+" 万/元 · "+d.n+" 次采样";};
 }
-async function load(){
+function resetView(){
+ samples=[];
+ for(const id of ["best","d3","d10","d12","time","source"])get(id).textContent="—";
+ get("count").textContent="0";
+ render();
+}
+async function loadRegion(regionId,updateUrl=true){
+ const entry=availableRegions.find(r=>r.id===regionId);
+ if(!entry)return;
+ activeRegion=regionId;
+ const version=++loadVersion;
+ get("region-select").value=regionId;
+ get("chart-title").textContent=entry.name+"金币报价 K 线";
+ get("market-link").href=entry.source_url;
+ get("market-link").textContent="游戏达人"+entry.name+"比价 ↗";
+ if(updateUrl){
+   const url=new URL(location.href);
+   url.searchParams.set("region",regionId);
+   history.replaceState(null,"",url.pathname+url.search+url.hash);
+ }
+ resetView();
+ get("status").textContent="正在读取"+entry.name+"历史行情…";
  try{
-   const r=await fetch("./data/history.json",{cache:"no-store"});
-   if(!r.ok)throw Error("HTTP "+r.status);
-   const data=await r.json();
-   if(data.region!=="kua2"||!Array.isArray(data.samples))throw Error("数据格式异常");
-   samples=data.samples.sort((a,b)=>a.observed_at.localeCompare(b.observed_at));
+   const response=await fetch("./data/"+encodeURIComponent(regionId)+".json",{cache:"no-store"});
+   if(!response.ok)throw Error("HTTP "+response.status);
+   const data=await response.json();
+   if(data.region!==regionId||!Array.isArray(data.samples))throw Error("数据跨区或格式不匹配");
+   if(version!==loadVersion)return;
+   samples=data.samples.slice().sort((a,b)=>a.observed_at.localeCompare(b.observed_at));
    const s=samples[samples.length-1];
    get("count").textContent=String(samples.length);
    if(s){
      get("best").textContent=Number(s.best_ratio).toFixed(2);
-     [["30000","d3"],["100000","d10"],["120000","d12"]].forEach(([k,id])=>{const n=s.depth&&s.depth[k];get(id).textContent=n?Number(n.ratio_wan_per_cny).toFixed(2):"库存不足";});
+     [["30000","d3"],["100000","d10"],["120000","d12"]].forEach(([k,id])=>{
+       const d=s.depth&&s.depth[k];
+       get(id).textContent=d?Number(d.ratio_wan_per_cny).toFixed(2):"库存不足";
+     });
      get("time").textContent=new Date(s.observed_at).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
-     get("source").textContent=String(s.offers_count)+ " / "+String(s.successful_channels);
+     get("source").textContent=String(s.offers_count)+" / "+String(s.successful_channels);
    }
-   get("status").textContent=s?("最近成功采样："+s.observed_at+"。可用通道 "+s.successful_channels+(s.attempted_channels?"/"+s.attempted_channels:"（总通道数未知）")+"，共 "+s.offers_count+" 条真实挂牌。"+(s.successful_channels<4?" 注意：部分上游渠道未返回数据，价格覆盖不完整。":"")+"这不是实际成交价。"):"暂无样本。首次 GitHub Actions 成功写入真实行情后将显示 K 线。";
+   if(!s){
+     get("status").textContent=entry.name+"暂无有效记录，首次实网采集成功后会自动出现。";
+   }else{
+     const total=s.attempted_channels;
+     const quality=(s.quality==="usable"||(s.quality==null&&s.successful_channels>=2&&s.offers_count>=5));
+     get("status").textContent=entry.name+"最新采样："+s.observed_at+
+       "；成功通道 "+s.successful_channels+(total?"/"+total:"（总数未知）")+
+       "，挂牌 "+s.offers_count+" 条。"+
+       (quality?"已纳入走势图。":"渠道覆盖不足，仅存档，不参与 K 线。")+
+       (total&&s.successful_channels<total?" 注意：部分来源尚未返回数据。":"")+
+       " 以上为挂牌估算，非成交价。";
+   }
    render();
- }catch(e){get("status").textContent="读取失败："+e.message+"；本地请使用 python -m http.server 8000 -d docs 启动静态服务。";}
+ }catch(err){
+   if(version!==loadVersion)return;
+   resetView();
+   get("status").textContent=entry.name+"历史读取失败："+err.message+"。请等待首次成功采集或检查 GitHub Actions。";
+ }
 }
+async function init(){
+ try{
+   const response=await fetch("./data/regions.json",{cache:"no-store"});
+   if(!response.ok)throw Error("跨区配置 HTTP "+response.status);
+   const data=await response.json();
+   if(!Array.isArray(data.regions)||data.regions.length!==9)throw Error("跨区配置无效");
+   availableRegions=data.regions;
+   const select=get("region-select");
+   select.textContent="";
+   for(const entry of availableRegions){
+     const option=document.createElement("option");
+     option.value=entry.id;option.textContent=entry.name;select.appendChild(option);
+   }
+   const query=new URLSearchParams(location.search).get("region");
+   const selected=availableRegions.some(x=>x.id===query)?query:(data.default_region||"kua2");
+   await loadRegion(selected,false);
+ }catch(err){
+   get("status").textContent="跨区配置读取失败："+err.message+"；请确认 GitHub Pages 已部署最新版。";
+   resetView();
+ }
+}
+get("region-select").addEventListener("change",event=>loadRegion(event.target.value));
 get("period").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.kind;document.querySelectorAll("#period button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));render();});
 window.addEventListener("resize",()=>render());
-load();
+init();
 </script>
 </body></html>

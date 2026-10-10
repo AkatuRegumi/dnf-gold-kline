@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "default_region": "kua2",
+  "regions": [
+    {
+      "id": "kua1",
+      "name": "跨一",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua1"
+    },
+    {
+      "id": "kua2",
+      "name": "跨二",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2"
+    },
+    {
+      "id": "kua3a",
+      "name": "跨三A",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua3a"
+    },
+    {
+      "id": "kua3b",
+      "name": "跨三B",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua3b"
+    },
+    {
+      "id": "kua4",
+      "name": "跨四",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua4"
+    },
+    {
+      "id": "kua5",
+      "name": "跨五",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua5"
+    },
+    {
+      "id": "kua6",
+      "name": "跨六",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua6"
+    },
+    {
+      "id": "kua7",
+      "name": "跨七",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua7"
+    },
+    {
+      "id": "kua8",
+      "name": "跨八",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua8"
+    }
+  ]
+}

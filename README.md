@@ -1,32 +1,36 @@
 # DNF Gold Kline | 国服金币行情
 
-一个非官方开源的 DNF 国服金币挂牌价格观察站。从跨二（湖南、湖北互通）开始，积累真实报价快照，展示日/周/月 K 线以及大额买金币的参考成本。
+非官方、开源的 **DNF 国服九个跨区**金币挂牌报价观察站。跨区独立保存历史，每天低频采样并展示真实报价日 K / 周 K / 月 K。
 
-**项目状态：已于 2026-10-11 完成首次 GitHub Actions 实网采集与历史数据自动提交。** 目前部分上游渠道返回失败，行情属于**局部市场样本**，不能视作所有平台的完整报价。无数据时图表显示空白，绝不生成伪造行情。
+**运行状态：跨二已于 2026-10-11 实网采集并自动提交成功；新增八个跨区需以首次 GitHub Actions 结果为准，不能将它们当作已验证可采集。**
 
-- 数据源：[游戏达人跨二比价页面](https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2)，仅采集公开商家挂牌信息；不是实际成交价。
-- 采集：GitHub Actions 每四小时低频运行一次，将成功的真实快照追加到 `docs/data/history.json`。采集失败不篡改历史。
-- 展示：静态 `docs/index.html`，可托管在 GitHub Pages。K 线只采用成功来源通道至少 3 个、有效挂牌至少 10 条的快照；覆盖不足的真实快照仅作记录，不会影响行情走势。这是经验性质量门槛，并不代表数据完整性证明。
-- 风险：第三方接口可能变动、拒绝云端请求或限制再发布；发生限制就停止，不绕过登录、验证码或风控。
+- GitHub Pages：<https://akaturegumi.github.io/dnf-gold-kline/>
+- 数据来源：[游戏达人比价网](https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2)，公开挂牌（并非真实成交价）。
+- 跨区：跨一、跨二、跨三 A/B、跨四、跨五、跨六、跨七、跨八。完整 ID、链接在 `docs/data/regions.json` 中集中管理。
+- 采集：GitHub Actions 每八小时触发一次，从九个官方跨区页面低频读取；一个跨区失败不会影响其他跨区，失败不会编造数据。
+- 历史数据：`docs/data/kua1.json` 至 `docs/data/kua8.json`（包括 `kua3a`/`kua3b`）。原先跨二的三条快照原样迁移到 `kua2.json`。
+- K 线只在当天有多个合格样本时展示最高、最低和实体；单次样本仅显示为点，不制造蜡烛图。
+- 质量启发式：成功通道 ≥2 且有效报价 ≥5 条记作 `usable`，不足时仍真实存档并标记 `partial`。不同跨区市场覆盖可能不同；**不能认为 usable 就是完整市场行情**。
+- 大额报价：页面展示公开挂单深度模型，假设可分拆下单，实际可能受限于卖家库存、手续费和数量限制。
+- 没有账号密码、交易功能、实时成交量或虚构历史数据。
 
-## 启用
+## 部署
 
-1. 在 Actions 手动触发 **Capture DNF gold quote**，确认运行成功且 `docs/data/history.json` 包含真实样本。
-2. 在 Settings → Pages 中选择 **Deploy from a branch**，分支 `main`，目录 `/docs`。
-3. 若 Actions 无法写入 `main`，检查仓库 Settings → Actions → General → Workflow permissions，允许适当的写入权限。
+GitHub Pages：在 Settings → Pages 中设为 `main` 分支下的 `/docs`。仓库启用 Actions，工作流需要 contents:write 以提交真实行情记录。仅采集脚本或跨区配置更新时自动进行一次采样，平时每八小时运行。
 
-## 本地测试
-
-需要 Python 3.11+，不需要额外安装 Python 依赖。
+## 本地运行（Python 3.11+，无需外部依赖）
 
 ```bash
 python -m unittest discover -s tests -v
-python -m collector.collect
+python -m collector.collect --region kua2
+python -m collector.collect --region all
 python -m http.server 8000 -d docs
 ```
 
-## 开源与数据来源
+本地目录中的 `docs/data` 也是数据仓库。若一次采集中途失败，其他成功跨区仍可独立写入，已保存记录不会被覆盖。
 
-源代码 MIT；上游数据不因此获得相同许可。长期公开运行前应确认网站数据使用条款及授权。采集思路借鉴 [yunko1993/astrbot_plugin_dnf_gold](https://github.com/yunko1993/astrbot_plugin_dnf_gold)（MIT），感谢原作者。本站不提供金币交易，亦不代表任何交易网站或游戏官方。
+## 来源、许可和贡献
 
-欢迎通过 Issues / Pull Requests 贡献跨区适配、价差分析、行情事件标记、数据源可靠性改进。请勿提交账号凭证、伪造历史数据或规避上游访问限制的代码。
+代码 MIT；**公开数据的使用授权与代码许可不同**，长期公开重发布前应确认上游条款。借鉴 [yunko1993/astrbot_plugin_dnf_gold](https://github.com/yunko1993/astrbot_plugin_dnf_gold)（MIT）的接口读取思路并保留致谢。网站只研究市场，既不提供游戏币交易，也不代表游戏官方或任何平台。若上游拒绝自动访问，应停止而非规避。
+
+欢迎提交 Issues / PR：提高数据可靠性、更多独立数据源、历史行情、版本节点标注等。
