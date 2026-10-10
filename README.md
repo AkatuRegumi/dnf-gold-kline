@@ -6,7 +6,7 @@
 
 - 数据源：[游戏达人跨二比价页面](https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2)，仅采集公开商家挂牌信息；不是实际成交价。
 - 采集：GitHub Actions 每四小时低频运行一次，将成功的真实快照追加到 `docs/data/history.json`。采集失败不篡改历史。
-- 展示：静态 `docs/index.html`，可托管在 GitHub Pages。
+- 展示：静态 `docs/index.html`，可托管在 GitHub Pages。K 线只采用成功来源通道至少 3 个、有效挂牌至少 10 条的快照；覆盖不足的真实快照仅作记录，不会影响行情走势。这是经验性质量门槛，并不代表数据完整性证明。
 - 风险：第三方接口可能变动、拒绝云端请求或限制再发布；发生限制就停止，不绕过登录、验证码或风控。
 
 ## 启用
