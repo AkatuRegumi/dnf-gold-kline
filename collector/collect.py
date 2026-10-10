@@ -105,6 +105,8 @@ def collect() -> dict:
         "observed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": "yxdr", "market": "listed_asks", "region": "kua2",
         "source_url": CROSS_2, "successful_channels": successes,
+        "attempted_channels": candidate_channels,
+        "failed_channels": candidate_channels - successes,
         **summary,
     }
 
