@@ -139,9 +139,9 @@ def run(selected: list[dict], data_dir: Path = DATA_DIR) -> tuple[int, int]:
             sample = collect(region)
             save_sample(region_id, sample, data_dir)
             passed += 1
-            print(f'[{region_id}] saved: quality={sample["quality"]} '
-                  f'best={sample["best_ratio"]} offers={sample["offers_count"]} '
-                  f'channels={sample["successful_channels"]}/{sample["attempted_channels"]}', flush=True)
+            print(f'[{region_id}] saved: quality={sample.get("quality", "unknown")} '
+                  f'best={sample.get("best_ratio", "?")} offers={sample.get("offers_count", "?")} '
+                  f'channels={sample.get("successful_channels", "?")}/{sample.get("attempted_channels", "?")}', flush=True)
         except (ValueError, RuntimeError, HTTPError, URLError, TimeoutError, OSError,
                 KeyError, json.JSONDecodeError) as exc:
             failed += 1
