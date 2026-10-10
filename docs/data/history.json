@@ -20,6 +20,35 @@
         "100000": null,
         "120000": null
       }
+    },
+    {
+      "observed_at": "2026-10-10T18:39:40+00:00",
+      "source": "yxdr",
+      "market": "listed_asks",
+      "region": "kua2",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2",
+      "successful_channels": 3,
+      "attempted_channels": 4,
+      "failed_channels": 1,
+      "best_ratio": 89.441,
+      "offers_count": 37,
+      "depth": {
+        "30000": {
+          "target_wan": 30000,
+          "quoted_cny": 347.2,
+          "ratio_wan_per_cny": 86.4048
+        },
+        "100000": {
+          "target_wan": 100000,
+          "quoted_cny": 1159.32,
+          "ratio_wan_per_cny": 86.2573
+        },
+        "120000": {
+          "target_wan": 120000,
+          "quoted_cny": 1391.82,
+          "ratio_wan_per_cny": 86.2179
+        }
+      }
     }
   ]
 }
