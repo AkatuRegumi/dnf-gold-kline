@@ -149,13 +149,26 @@ def run(selected: list[dict], data_dir: Path = DATA_DIR) -> tuple[int, int]:
     return passed, failed
 
 
+def pick_regions(options: list[dict], requested: str, now: datetime | None = None) -> list[dict]:
+    """Three staggered groups, each polled twice per UTC day at 4-hour intervals."""
+    if requested == "all":
+        return options
+    if requested == "scheduled":
+        stamp = now if now is not None else datetime.now(timezone.utc)
+        slot = (stamp.astimezone(timezone.utc).hour // 4) % 3
+        return [item for i, item in enumerate(options) if i % 3 == slot]
+    return [item for item in options if item["id"] == requested]
+
+
 def main() -> None:
     options = regions()
     parser = argparse.ArgumentParser(description="Capture real DNF market quotes by cross-region")
-    parser.add_argument("--region", default="all", choices=["all"] + [r["id"] for r in options])
+    parser.add_argument("--region", default="scheduled",
+                        choices=["scheduled", "all"] + [r["id"] for r in options])
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
     args = parser.parse_args()
-    selected = options if args.region == "all" else [r for r in options if r["id"] == args.region]
+    selected = pick_regions(options, args.region)
+    print("selected regions: " + ", ".join(r["id"] for r in selected), flush=True)
     passed, failed = run(selected, args.data_dir)
     print(f"regions: saved={passed}, failed={failed}", flush=True)
     if passed == 0:

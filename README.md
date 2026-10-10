@@ -7,7 +7,7 @@
 - GitHub Pages：<https://akaturegumi.github.io/dnf-gold-kline/>
 - 数据来源：[游戏达人比价网](https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2)，公开挂牌（并非真实成交价）。
 - 跨区：跨一、跨二、跨三 A/B、跨四、跨五、跨六、跨七、跨八。完整 ID、链接在 `docs/data/regions.json` 中集中管理。
-- 采集：GitHub Actions 每八小时触发一次，从九个官方跨区页面低频读取；一个跨区失败不会影响其他跨区，失败不会编造数据。
+- 采集：GitHub Actions 每四小时触发一次，每次轮询三个跨区（九个跨区每天各两次），避免短时连续请求全部九个市场；一个跨区失败不会影响其他跨区，失败不会编造数据。
 - 历史数据：`docs/data/kua1.json` 至 `docs/data/kua8.json`（包括 `kua3a`/`kua3b`）。原先跨二的三条快照原样迁移到 `kua2.json`。
 - K 线只在当天有多个合格样本时展示最高、最低和实体；单次样本仅显示为点，不制造蜡烛图。
 - 质量启发式：成功通道 ≥2 且有效报价 ≥5 条记作 `usable`，不足时仍真实存档并标记 `partial`。不同跨区市场覆盖可能不同；**不能认为 usable 就是完整市场行情**。
@@ -16,13 +16,14 @@
 
 ## 部署
 
-GitHub Pages：在 Settings → Pages 中设为 `main` 分支下的 `/docs`。仓库启用 Actions，工作流需要 contents:write 以提交真实行情记录。仅采集脚本或跨区配置更新时自动进行一次采样，平时每八小时运行。
+GitHub Pages：在 Settings → Pages 中设为 `main` 分支下的 `/docs`。仓库启用 Actions，工作流需要 contents:write 以提交真实行情记录。仅采集脚本或跨区配置更新时自动进行一次采样，平时每四小时运行一次、每次轮询三个跨区。
 
 ## 本地运行（Python 3.11+，无需外部依赖）
 
 ```bash
 python -m unittest discover -s tests -v
 python -m collector.collect --region kua2
+python -m collector.collect --region scheduled
 python -m collector.collect --region all
 python -m http.server 8000 -d docs
 ```

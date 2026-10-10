@@ -33,6 +33,21 @@ class MarketTest(unittest.TestCase):
         self.assertIsNone(depth(unique, 100000))
         self.assertEqual(summarize(rows)["offers_count"], 2)
 
+    def test_staggered_market_groups(self):
+        from collector.collect import regions, pick_regions
+        from datetime import datetime, timezone
+        opts = regions()
+        groups = []
+        for hour in (0, 4, 8):
+            selected = pick_regions(opts, "scheduled", datetime(2026, 10, 11, hour, tzinfo=timezone.utc))
+            self.assertEqual(len(selected), 3)
+            groups.extend(r["id"] for r in selected)
+        self.assertCountEqual(groups, [r["id"] for r in opts])
+        next_slot = pick_regions(opts, "scheduled", datetime(2026, 10, 11, 12, tzinfo=timezone.utc))
+        self.assertEqual(next_slot, pick_regions(opts, "scheduled", datetime(2026, 10, 11, 0, tzinfo=timezone.utc)))
+        self.assertEqual(pick_regions(opts, "all"), opts)
+        self.assertEqual([r["id"] for r in pick_regions(opts, "kua8")], ["kua8"])
+
     def test_all_regions_and_isolation(self):
         import json
         from collector.collect import regions, save_sample
