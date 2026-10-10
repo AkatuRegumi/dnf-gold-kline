@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>DNF Gold Kline | 国服跨二金币行情</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1120;--panel:#162235;--line:#293951;--text:#edf3ff;--muted:#9aafc6;--up:#42d9a4;--down:#ff6e81;--blue:#8db8ff}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#11263d,var(--bg) 45%);color:var(--text);font:15px/1.55 system-ui,"Microsoft YaHei",sans-serif}
+main{max-width:1110px;margin:auto;padding:28px 22px 60px}a{color:var(--blue)}h1{font-size:28px;margin:0}h1 b{color:var(--up)}h2{font-size:17px;margin:0 0 12px}
+small,.sub,.muted{color:var(--muted)}.sub{margin:6px 0 26px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.panel{background:rgba(20,33,52,.96);border:1px solid var(--line);border-radius:15px;padding:19px}
+.stat strong{font-size:27px;display:block;font-variant-numeric:tabular-nums;white-space:nowrap}.stat small{font-size:12px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:13px;margin-top:13px}
+.top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.buttons{display:flex;gap:5px}button{color:var(--muted);background:#1a2b42;border:1px solid #324761;border-radius:8px;padding:7px 10px;cursor:pointer}
+button[aria-pressed="true"]{background:#25574f;color:#91f5d1;border-color:#347d71}
+canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.info{border-bottom:1px solid var(--line);padding:10px 0}.info:last-child{border:0}.info strong{display:block;font-size:18px}
+.note{margin-top:13px}footer{color:var(--muted);font-size:12px;margin-top:25px}
+@media(max-width:830px){.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}
+@media(max-width:500px){main{padding:18px 12px 40px}.stat strong{font-size:21px}.panel{padding:13px}h1{font-size:23px}canvas{height:290px}}
+</style>
+</head>
+<body><main>
+<h1><b>◆</b> DNF GOLD KLINE</h1>
+<div class="sub">国服跨二区（湖南／湖北）· 公开挂牌报价 · 非官方开源研究项目</div>
+<div class="stats">
+<div class="panel stat"><small>最高挂牌比例</small><strong id="best">—</strong><small>万金币 / 1 元</small></div>
+<div class="panel stat"><small>买 3 亿综合比例</small><strong id="d3">—</strong><small>挂牌库存估算</small></div>
+<div class="panel stat"><small>买 10 亿综合比例</small><strong id="d10">—</strong><small>挂牌库存估算</small></div>
+<div class="panel stat"><small>买 12 亿综合比例</small><strong id="d12">—</strong><small>挂牌库存估算</small></div>
+</div>
+<div class="layout">
+<section class="panel"><div class="top"><div><h2>跨二金币报价 K 线</h2><small>每元换到的金币越多，表示金币越便宜。无采样不补造。</small></div>
+<div class="buttons" id="period"><button data-kind="day" aria-pressed="true">日 K</button><button data-kind="week" aria-pressed="false">周 K</button><button data-kind="month" aria-pressed="false">月 K</button></div></div>
+<canvas id="chart" role="img" aria-label="金币报价日线周线月线图"></canvas>
+<div id="tip">等待真实报价数据。</div></section>
+<aside class="panel"><h2>行情元信息</h2>
+<div class="info"><small>数据来源</small><strong><a href="https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2" target="_blank" rel="noopener">游戏达人跨二比价 ↗</a></strong></div>
+<div class="info"><small>最后成功采样（北京时间）</small><strong id="time">—</strong></div>
+<div class="info"><small>累计快照</small><strong id="count">0</strong></div>
+<div class="info"><small>有效挂单／成功通道</small><strong id="source">—</strong></div>
+<div class="info"><small>市场口径</small><strong>挂牌卖价</strong><small>不是实际成交价格；深度估算假设挂单可拆分。</small></div>
+</aside></div>
+<section class="panel note"><h2>采集状态</h2><div id="status" class="muted">正在读取历史行情…</div></section>
+<footer>项目开源于 <a href="https://github.com/AkatuRegumi/dnf-gold-kline">GitHub</a>。不提供金币交易，价格仅作观察用途。报价可能受到平台手续费、卖家库存、订单限额和下单时间影响；若网站拒绝自动访问，采集会停止。</footer>
+</main>
+<script>
+"use strict";
+let samples=[],kind="day";
+const get=id=>document.getElementById(id);
+const localDate=stamp=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(stamp));
+function key(stamp){
+ const day=localDate(stamp);
+ if(kind==="day")return day;
+ if(kind==="month")return day.slice(0,7);
+ const p=day.split("-").map(Number),d=new Date(Date.UTC(p[0],p[1]-1,p[2]));
+ d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);
+ return d.toISOString().slice(0,10);
+}
+function build(){
+ const groups=new Map();
+ for(const s of samples){
+   const ratio=Number(s.best_ratio);
+   if(!Number.isFinite(ratio)||ratio<=0)continue;
+   const k=key(s.observed_at);
+   if(!groups.has(k))groups.set(k,[]);
+   groups.get(k).push(ratio);
+ }
+ return [...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([date,v])=>({
+   date:date,open:v[0],high:Math.max(...v),low:Math.min(...v),close:v[v.length-1],n:v.length
+ }));
+}
+function render(){
+ const canvas=get("chart"),ctx=canvas.getContext("2d"),width=canvas.clientWidth,height=canvas.clientHeight;
+ const pixel=Math.min(2,window.devicePixelRatio||1);
+ canvas.width=Math.round(width*pixel);canvas.height=Math.round(height*pixel);
+ ctx.setTransform(pixel,0,0,pixel,0,0);ctx.clearRect(0,0,width,height);
+ const data=build(),tip=get("tip");
+ if(!data.length){ctx.fillStyle="#9aafc6";ctx.textAlign="center";ctx.font="16px system-ui";ctx.fillText("等待第一条真实报价",width/2,height/2);tip.textContent="暂时没有历史报价。采集成功后这里会自动出现走势图。";return;}
+ const left=50,right=18,top=27,bottom=40,w=width-left-right,h=height-top-bottom;
+ const low=Math.min(...data.map(x=>x.low)),high=Math.max(...data.map(x=>x.high)),margin=Math.max(0.8,(high-low)*0.14);
+ const minimum=low-margin,maximum=high+margin;
+ const x=i=>left+(i+0.5)*w/data.length,y=v=>top+(maximum-v)/(maximum-minimum)*h;
+ ctx.font="11px system-ui";ctx.textAlign="left";
+ for(let i=0;i<5;i++){const val=minimum+(maximum-minimum)*i,yy=y(val);ctx.strokeStyle="#2a3d54";ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#9aafc6";ctx.fillText(val.toFixed(1),3,yy+4);}
+ const step=w/data.length,candleWidth=Math.max(2,Math.min(17,step*0.62));
+ data.forEach((d,i)=>{
+   const xx=x(i),color=d.close>=d.open?"#42d9a4":"#ff6e81";ctx.strokeStyle=color;ctx.fillStyle=color;
+   if(d.n===1){ctx.beginPath();ctx.arc(xx,y(d.close),Math.max(2,Math.min(4,step*.23)),0,Math.PI*2);ctx.fill();}
+   else{ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,y(d.high));ctx.lineTo(xx,y(d.low));ctx.stroke();const yy=Math.min(y(d.open),y(d.close)),hh=Math.max(2,Math.abs(y(d.close)-y(d.open)));ctx.fillRect(xx-candleWidth/2,yy,candleWidth,hh);}
+   const frequency=Math.max(1,Math.ceil(data.length/7));if(i%frequency===0||i===data.length-1){ctx.fillStyle="#9aafc6";ctx.textAlign="center";ctx.fillText(d.date.slice(5),xx,height-14);}
+ });
+ const last=data[data.length-1];
+ tip.textContent=last.date+" 开 "+last.open.toFixed(2)+" / 高 "+last.high.toFixed(2)+" / 低 "+last.low.toFixed(2)+" / 收 "+last.close.toFixed(2)+" 万/元 · "+last.n+" 次采样";
+ canvas.onmousemove=function(ev){const r=canvas.getBoundingClientRect(),idx=Math.max(0,Math.min(data.length-1,Math.floor((ev.clientX-r.left-left)/step))),d=data[idx];tip.textContent=d.date+" 开 "+d.open.toFixed(2)+" / 高 "+d.high.toFixed(2)+" / 低 "+d.low.toFixed(2)+" / 收 "+d.close.toFixed(2)+" 万/元 · "+d.n+" 次采样";};
+}
+async function load(){
+ try{
+   const r=await fetch("./data/history.json",{cache:"no-store"});
+   if(!r.ok)throw Error("HTTP "+r.status);
+   const data=await r.json();
+   if(data.region!=="kua2"||!Array.isArray(data.samples))throw Error("数据格式异常");
+   samples=data.samples.sort((a,b)=>a.observed_at.localeCompare(b.observed_at));
+   const s=samples[samples.length-1];
+   get("count").textContent=String(samples.length);
+   if(s){
+     get("best").textContent=Number(s.best_ratio).toFixed(2);
+     [["30000","d3"],["100000","d10"],["120000","d12"]].forEach(([k,id])=>{const n=s.depth&&s.depth[k];get(id).textContent=n?Number(n.ratio_wan_per_cny).toFixed(2):"库存不足";});
+     get("time").textContent=new Date(s.observed_at).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
+     get("source").textContent=String(s.offers_count)+ " / "+String(s.successful_channels);
+   }
+   get("status").textContent=s?"采集成功，最近一次更新时间已显示；数据为真实商家挂牌快照。":"暂无样本。首次 GitHub Actions 成功写入真实行情后将显示 K 线。";
+   render();
+ }catch(e){get("status").textContent="读取失败："+e.message+"；本地请使用 python -m http.server 8000 -d docs 启动静态服务。";}
+}
+get("period").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.kind;document.querySelectorAll("#period button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));render();});
+window.addEventListener("resize",()=>render());
+load();
+</script>
+</body></html>

@@ -1,0 +1,33 @@
+name: Capture DNF gold quote
+on:
+  schedule:
+    - cron: '17 */4 * * *' # six readings/day, UTC; best effort
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: dnf-price-history
+  cancel-in-progress: false
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Collect one verified quote snapshot
+        run: python -m collector.collect
+      - name: Commit only genuine new data
+        run: |
+          if git diff --quiet -- docs/data/history.json; then
+            echo 'No new data'; exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/data/history.json
+          git commit -m 'data: append cross-two gold quote snapshot'
+          git push
