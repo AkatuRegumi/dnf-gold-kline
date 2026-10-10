@@ -34,7 +34,7 @@ canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--mut
 <section class="panel"><div class="top"><div><h2>跨二金币报价 K 线</h2><small>每元换到的金币越多，表示金币越便宜。无采样不补造。</small></div>
 <div class="buttons" id="period"><button data-kind="day" aria-pressed="true">日 K</button><button data-kind="week" aria-pressed="false">周 K</button><button data-kind="month" aria-pressed="false">月 K</button></div></div>
 <canvas id="chart" role="img" aria-label="金币报价日线周线月线图"></canvas>
-<div id="tip">等待真实报价数据。</div></section>
+<div id="tip">等待真实报价数据。</div><small>仅纳入成功通道 ≥3 且有效报价 ≥10 条的快照计算 K 线。覆盖不足的真实记录仍保留在数据文件中，不参与走势图。</small></section>
 <aside class="panel"><h2>行情元信息</h2>
 <div class="info"><small>数据来源</small><strong><a href="https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2" target="_blank" rel="noopener">游戏达人跨二比价 ↗</a></strong></div>
 <div class="info"><small>最后成功采样（北京时间）</small><strong id="time">—</strong></div>
@@ -62,7 +62,9 @@ function build(){
  const groups=new Map();
  for(const s of samples){
    const ratio=Number(s.best_ratio);
-   if(!Number.isFinite(ratio)||ratio<=0)continue;
+   // Low-coverage observations stay in history but do not distort the plotted K line.
+   const reliable=(s.quality==="usable")||(s.quality==null&&s.successful_channels>=3&&s.offers_count>=10);
+   if(!reliable||!Number.isFinite(ratio)||ratio<=0)continue;
    const k=key(s.observed_at);
    if(!groups.has(k))groups.set(k,[]);
    groups.get(k).push(ratio);
