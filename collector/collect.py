@@ -101,8 +101,10 @@ def collect() -> dict:
     if successes == 0:
         raise RuntimeError("没有成功的公开报价通道，拒绝写入假数据")
     summary = summarize(rows)
+    quality = "usable" if successes >= 3 and summary["offers_count"] >= 10 else "partial"
     return {
         "observed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "quality": quality,
         "source": "yxdr", "market": "listed_asks", "region": "kua2",
         "source_url": CROSS_2, "successful_channels": successes,
         "attempted_channels": candidate_channels,
