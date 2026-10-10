@@ -1,5 +1,32 @@
 {
   "schema_version": 1,
   "region": "kua7",
-  "samples": []
+  "samples": [
+    {
+      "observed_at": "2026-10-10T19:15:34+00:00",
+      "quality": "partial",
+      "source": "yxdr",
+      "market": "listed_asks",
+      "region": "kua7",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua7",
+      "successful_channels": 2,
+      "attempted_channels": 4,
+      "failed_channels": 2,
+      "best_ratio": 88.9831,
+      "offers_count": 4,
+      "depth": {
+        "30000": {
+          "target_wan": 30000,
+          "quoted_cny": 338.05,
+          "ratio_wan_per_cny": 88.7453
+        },
+        "100000": {
+          "target_wan": 100000,
+          "quoted_cny": 1132.15,
+          "ratio_wan_per_cny": 88.3278
+        },
+        "120000": null
+      }
+    }
+  ]
 }
