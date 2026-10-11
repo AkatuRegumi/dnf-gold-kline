@@ -14,7 +14,15 @@ small,.sub,.muted{color:var(--muted)}.sub{margin:6px 0 26px}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:13px;margin-top:13px}
 .top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.buttons{display:flex;gap:5px}button{color:var(--muted);background:#1a2b42;border:1px solid #324761;border-radius:8px;padding:7px 10px;cursor:pointer}
 button[aria-pressed="true"]{background:#25574f;color:#91f5d1;border-color:#347d71}
-canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+canvas{display:block;width:100%;height:375px;cursor:crosshair;touch-action:pan-y}
+.chart-stage{position:relative}
+.chart-cross-v,.chart-cross-h{position:absolute;pointer-events:none;z-index:2}
+.chart-cross-v{border-left:1px dashed rgba(141,184,255,.75)}
+.chart-cross-h{border-top:1px dashed rgba(141,184,255,.6)}
+.chart-cursor-price{position:absolute;left:0;padding:2px 4px;border-radius:4px;background:#345478;color:#fff;font:11px system-ui;transform:translateY(-50%);pointer-events:none;z-index:3;font-variant-numeric:tabular-nums}
+.chart-hover{position:absolute;z-index:4;pointer-events:none;white-space:pre-line;min-width:184px;max-width:calc(100% - 16px);padding:10px 13px;border:1px solid #5b86aa;border-radius:9px;background:rgba(9,21,37,.97);box-shadow:0 8px 26px #0008;font:13px/1.6 system-ui,"Microsoft YaHei",sans-serif;color:var(--text);font-variant-numeric:tabular-nums}
+.chart-cross-v[hidden],.chart-cross-h[hidden],.chart-cursor-price[hidden],.chart-hover[hidden]{display:none}
+#tip{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .info{border-bottom:1px solid var(--line);padding:10px 0}.info:last-child{border:0}.info strong{display:block;font-size:18px}
 .overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
 .overview button{padding:12px;text-align:left;line-height:1.5;min-width:0;white-space:normal}
@@ -41,7 +49,13 @@ canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--mut
 <div class="layout">
 <section class="panel"><div class="top"><div><h2 id="chart-title">跨二金币报价 K 线</h2><small>每元换到的金币越多，表示金币越便宜。无采样不补造。</small></div>
 <div class="buttons" id="period"><button data-kind="day" aria-pressed="true">日 K</button><button data-kind="week" aria-pressed="false">周 K</button><button data-kind="month" aria-pressed="false">月 K</button></div></div>
-<canvas id="chart" role="img" aria-label="金币报价日线周线月线图"></canvas>
+<div class="chart-stage" id="chart-stage">
+<canvas id="chart" role="img" tabindex="0" aria-label="金币报价日线周线月线图；可用左右方向键查看日期"></canvas>
+<div class="chart-cross-v" id="chart-cross-v" hidden aria-hidden="true"></div>
+<div class="chart-cross-h" id="chart-cross-h" hidden aria-hidden="true"></div>
+<div class="chart-cursor-price" id="chart-cursor-price" hidden aria-hidden="true"></div>
+<div class="chart-hover" id="chart-hover" hidden role="tooltip"></div>
+</div>
 <div id="tip">等待真实报价数据。</div><small>仅采用满足最低有效来源门槛（至少两个通道、五条挂单）的快照形成 K 线；覆盖不足的真实记录仍保留，不参与绘图。这不是全市场覆盖率保证。</small></section>
 <aside class="panel"><h2>行情元信息</h2>
 <div class="info"><small>数据来源</small><strong><a id="market-link" href="https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2" target="_blank" rel="noopener">游戏达人跨二比价 ↗</a></strong></div>
@@ -92,8 +106,10 @@ function render(){
  canvas.width=Math.round(width*pixel);canvas.height=Math.round(height*pixel);
  ctx.setTransform(pixel,0,0,pixel,0,0);ctx.clearRect(0,0,width,height);
  const data=build(),tip=get("tip");
- // A previous region's mouse handler closes over its old candles.
- canvas.onmousemove=null;
+ const hover=get("chart-hover"),crossV=get("chart-cross-v"),crossH=get("chart-cross-h"),cursorPrice=get("chart-cursor-price");
+ // Clear all handlers and overlays: region/period changes must never reuse stale candles.
+ for(const overlay of [hover,crossV,crossH,cursorPrice])overlay.hidden=true;
+ canvas.onpointermove=null;canvas.onpointerleave=null;canvas.onpointerdown=null;canvas.onkeydown=null;
  if(!data.length){ctx.fillStyle="#9aafc6";ctx.textAlign="center";ctx.font="16px system-ui";ctx.fillText("等待第一条真实报价",width/2,height/2);tip.textContent="暂时没有历史报价。采集成功后这里会自动出现走势图。";return;}
  const left=50,right=18,top=27,bottom=40,w=width-left-right,h=height-top-bottom;
  const low=Math.min(...data.map(x=>x.low)),high=Math.max(...data.map(x=>x.high)),margin=Math.max(0.8,(high-low)*0.14);
@@ -108,9 +124,56 @@ function render(){
    else{ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,y(d.high));ctx.lineTo(xx,y(d.low));ctx.stroke();const yy=Math.min(y(d.open),y(d.close)),hh=Math.max(2,Math.abs(y(d.close)-y(d.open)));ctx.fillRect(xx-candleWidth/2,yy,candleWidth,hh);}
    const frequency=Math.max(1,Math.ceil(data.length/7));if(i%frequency===0||i===data.length-1){ctx.fillStyle="#9aafc6";ctx.textAlign="center";ctx.fillText(d.date.slice(5),xx,height-14);}
  });
- const last=data[data.length-1];
- tip.textContent=last.date+" 开 "+last.open.toFixed(2)+" / 高 "+last.high.toFixed(2)+" / 低 "+last.low.toFixed(2)+" / 收 "+last.close.toFixed(2)+" 万/元 · "+last.n+" 次采样";
- canvas.onmousemove=function(ev){const r=canvas.getBoundingClientRect(),idx=Math.max(0,Math.min(data.length-1,Math.floor((ev.clientX-r.left-left)/step))),d=data[idx];tip.textContent=d.date+" 开 "+d.open.toFixed(2)+" / 高 "+d.high.toFixed(2)+" / 低 "+d.low.toFixed(2)+" / 收 "+d.close.toFixed(2)+" 万/元 · "+d.n+" 次采样";};
+ const describe=d=>d.date+" 开 "+d.open.toFixed(2)+" / 高 "+d.high.toFixed(2)+" / 低 "+d.low.toFixed(2)+" / 收 "+d.close.toFixed(2)+" 万/元 · "+d.n+" 次采样";
+ const last=data[data.length-1],defaultReadout=describe(last);
+ tip.textContent=defaultReadout;
+ let hoveredIndex=null;
+ function hideHover(){
+   for(const overlay of [hover,crossV,crossH,cursorPrice])overlay.hidden=true;
+   hoveredIndex=null;
+   tip.textContent=defaultReadout;
+ }
+ function showHover(px,py,forcedIndex=null){
+   if(px<left||px>width-right||py<top||py>height-bottom){hideHover();return;}
+   const index=forcedIndex===null?
+     Math.max(0,Math.min(data.length-1,Math.floor((px-left)/step))):
+     Math.max(0,Math.min(data.length-1,forcedIndex));
+   const d=data[index],xx=x(index),yy=Math.max(top,Math.min(height-bottom,py));
+   const pointerRatio=minimum+(maximum-minimum)*(top+h-yy)/h;
+   hoveredIndex=index;
+   crossV.style.left=xx+"px";crossV.style.top=top+"px";crossV.style.height=h+"px";
+   crossH.style.left=left+"px";crossH.style.top=yy+"px";crossH.style.width=w+"px";
+   cursorPrice.style.top=yy+"px";cursorPrice.textContent=pointerRatio.toFixed(2);
+   for(const overlay of [crossV,crossH,cursorPrice])overlay.hidden=false;
+   hover.textContent=d.date+
+     "\n开盘 "+d.open.toFixed(2)+"    最高 "+d.high.toFixed(2)+
+     "\n最低 "+d.low.toFixed(2)+"    收盘 "+d.close.toFixed(2)+
+     "\n合格采样 "+d.n+" 次"+
+     "\n单位：万金币/元（挂牌报价）";
+   hover.hidden=false;
+   // Measure after showing the popup; keep it inside the chart on narrow screens.
+   const popupWidth=hover.offsetWidth,popupHeight=hover.offsetHeight;
+   const maxLeft=Math.max(8,width-popupWidth-8);
+   const preferredLeft=px+18+popupWidth>width?px-popupWidth-14:px+18;
+   hover.style.left=Math.max(8,Math.min(maxLeft,preferredLeft))+"px";
+   hover.style.top=Math.max(8,Math.min(height-popupHeight-8,py-popupHeight-12))+"px";
+   tip.textContent=describe(d);
+ }
+ function handlePointer(ev){
+   const rect=canvas.getBoundingClientRect();
+   showHover(ev.clientX-rect.left,ev.clientY-rect.top);
+ }
+ canvas.onpointermove=handlePointer;
+ canvas.onpointerdown=ev=>{if(ev.pointerType==="touch")handlePointer(ev);};
+ canvas.onpointerleave=ev=>{if(ev.pointerType!=="touch")hideHover();};
+ canvas.onkeydown=ev=>{
+   if(ev.key!=="ArrowLeft"&&ev.key!=="ArrowRight"&&ev.key!=="Escape")return;
+   ev.preventDefault();
+   if(ev.key==="Escape"){hideHover();return;}
+   const index=hoveredIndex===null?data.length-1:Math.max(0,Math.min(data.length-1,hoveredIndex+(ev.key==="ArrowLeft"?-1:1)));
+   showHover(x(index),y(data[index].close),index);
+ };
+ canvas.onblur=hideHover;
 }
 function resetView(){
  samples=[];
