@@ -98,7 +98,11 @@ def collect(region: dict) -> dict:
                         if parsed:
                             rows.append(parsed)
             else:
-                print(f"[{region_id}] channel={pf_id} unavailable")
+                # Safe structural diagnostics only; never log signatures, IDs or raw payloads.
+                outcome = str(response.get("success"))[:12] if isinstance(response, dict) else "non-dict"
+                payload_kind = type(offers).__name__
+                payload_size = len(offers) if isinstance(offers, list) else 0
+                print(f"[{region_id}] channel={pf_id} unavailable success={outcome} data={payload_kind} count={payload_size}")
         except (ValueError, TypeError, KeyError, HTTPError, URLError, TimeoutError, OSError) as exc:
             print(f"[{region_id}] channel error: {type(exc).__name__}")
         time.sleep(0.5)

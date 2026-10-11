@@ -16,9 +16,16 @@ small,.sub,.muted{color:var(--muted)}.sub{margin:6px 0 26px}
 button[aria-pressed="true"]{background:#25574f;color:#91f5d1;border-color:#347d71}
 canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .info{border-bottom:1px solid var(--line);padding:10px 0}.info:last-child{border:0}.info strong{display:block;font-size:18px}
+.overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
+.overview button{padding:12px;text-align:left;line-height:1.5;min-width:0;white-space:normal}
+.overview button strong{display:block;color:var(--text)}
+.overview button span{display:block;font-size:13px;color:var(--muted)}
+.overview button[data-selected="true"]{border-color:var(--up)}
+.preview{margin-top:12px;padding:11px;border:1px dashed #566c84;border-radius:9px;color:#d6e2f3}
+
 .note{margin-top:13px}.region-control{display:flex;align-items:center;gap:9px;margin:0 0 18px;flex-wrap:wrap}.region-control label{color:var(--muted)}.region-control select{color:var(--text);background:#1a2b42;border:1px solid #45627b;border-radius:9px;padding:9px 28px 9px 12px;font:inherit;cursor:pointer}.region-control select:focus{outline:2px solid var(--blue)}footer{color:var(--muted);font-size:12px;margin-top:25px}
-@media(max-width:830px){.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}
-@media(max-width:500px){main{padding:18px 12px 40px}.stat strong{font-size:21px}.panel{padding:13px}h1{font-size:23px}canvas{height:290px}}
+@media(max-width:830px){.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}.overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:500px){main{padding:18px 12px 40px}.stat strong{font-size:21px}.panel{padding:13px}h1{font-size:23px}canvas{height:290px}.overview{grid-template-columns:1fr}}
 </style>
 </head>
 <body><main>
@@ -26,7 +33,7 @@ canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--mut
 <div class="sub">国服全九跨区 · 独立历史报价 · 非官方开源研究项目</div>
 <div class="region-control"><label for="region-select">选择跨区</label><select id="region-select" aria-label="选择国服跨区"><option value="kua2">跨二</option></select><small id="region-note">每个跨区独立积累数据</small></div>
 <div class="stats">
-<div class="panel stat"><small>最高挂牌比例</small><strong id="best">—</strong><small>万金币 / 1 元</small></div>
+<div class="panel stat"><small>最近合格快照·最高挂牌比例</small><strong id="best">—</strong><small>万金币 / 1 元</small></div>
 <div class="panel stat"><small>买 3 亿综合比例</small><strong id="d3">—</strong><small>挂牌库存估算</small></div>
 <div class="panel stat"><small>买 10 亿综合比例</small><strong id="d10">—</strong><small>挂牌库存估算</small></div>
 <div class="panel stat"><small>买 12 亿综合比例</small><strong id="d12">—</strong><small>挂牌库存估算</small></div>
@@ -39,17 +46,22 @@ canvas{display:block;width:100%;height:375px}#tip{font-size:13px;color:var(--mut
 <aside class="panel"><h2>行情元信息</h2>
 <div class="info"><small>数据来源</small><strong><a id="market-link" href="https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2" target="_blank" rel="noopener">游戏达人跨二比价 ↗</a></strong></div>
 <div class="info"><small>最后成功采样（北京时间）</small><strong id="time">—</strong></div>
+<div class="info"><small>最近合格行情时间（北京时间）</small><strong id="qualified-time">—</strong></div>
 <div class="info"><small>累计快照</small><strong id="count">0</strong></div>
 <div class="info"><small>有效挂单／成功通道</small><strong id="source">—</strong></div>
 <div class="info"><small>市场口径</small><strong>挂牌卖价</strong><small>不是实际成交价格；深度估算假设挂单可拆分。</small></div>
 </aside></div>
-<section class="panel note"><h2>采集状态</h2><div id="status" class="muted">正在读取历史行情…</div></section>
+<section class="panel note"><h2>采集状态</h2><div id="status" class="muted">正在读取历史行情…</div><div id="partial-preview" class="preview" hidden></div></section>
+<section class="panel note"><h2>九跨区快照概览</h2><small>合格报价进入正式 K 线；覆盖不足仅显示观察到的部分挂牌，不能视为全市场最高价。点击跨区查看详情。</small><div id="overview" class="overview">正在读取跨区数据…</div></section>
 <footer>项目开源于 <a href="https://github.com/AkatuRegumi/dnf-gold-kline">GitHub</a>。不提供金币交易，价格仅作观察用途。报价可能受到平台手续费、卖家库存、订单限额和下单时间影响；若网站拒绝自动访问，采集会停止。</footer>
 </main>
 <script>
 "use strict";
 let samples=[],kind="day",activeRegion="kua2",availableRegions=[],loadVersion=0;
 const get=id=>document.getElementById(id);
+const qualified=s=>!!s&&(s.quality==="usable"||(s.quality==null&&s.successful_channels>=2&&s.offers_count>=5));
+const fmtTime=stamp=>new Date(stamp).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
+const fmtRatio=s=>Number.isFinite(Number(s?.best_ratio))?Number(s.best_ratio).toFixed(2):"—";
 const localDate=stamp=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(stamp));
 function key(stamp){
  const day=localDate(stamp);
@@ -64,7 +76,7 @@ function build(){
  for(const s of samples){
    const ratio=Number(s.best_ratio);
    // Low-coverage observations stay in history but do not distort the plotted K line.
-   const reliable=(s.quality==="usable")||(s.quality==null&&s.successful_channels>=2&&s.offers_count>=5);
+   const reliable=qualified(s);
    if(!reliable||!Number.isFinite(ratio)||ratio<=0)continue;
    const k=key(s.observed_at);
    if(!groups.has(k))groups.set(k,[]);
@@ -102,8 +114,10 @@ function render(){
 }
 function resetView(){
  samples=[];
- for(const id of ["best","d3","d10","d12","time","source"])get(id).textContent="—";
+ for(const id of ["best","d3","d10","d12","time","qualified-time","source"])get(id).textContent="—";
  get("count").textContent="0";
+ get("partial-preview").hidden=true;
+ get("partial-preview").textContent="";
  render();
 }
 async function loadRegion(regionId,updateUrl=true){
@@ -130,31 +144,40 @@ async function loadRegion(regionId,updateUrl=true){
    if(version!==loadVersion)return;
    samples=data.samples.slice().sort((a,b)=>a.observed_at.localeCompare(b.observed_at));
    const s=samples[samples.length-1];
+   const lastQualified=samples.slice().reverse().find(qualified);
    get("count").textContent=String(samples.length);
+   if(lastQualified){
+     // Price cards must always refer to a qualified snapshot, never a partial one.
+     get("best").textContent=fmtRatio(lastQualified);
+     get("qualified-time").textContent=fmtTime(lastQualified.observed_at);
+     [["30000","d3"],["100000","d10"],["120000","d12"]].forEach(([k,id])=>{
+       const d=lastQualified.depth&&lastQualified.depth[k];
+       get(id).textContent=d?Number(d.ratio_wan_per_cny).toFixed(2):"库存不足";
+     });
+   }
    if(s){
-     const qualified=s.quality==="usable"||(s.quality==null&&s.successful_channels>=2&&s.offers_count>=5);
-     // Incomplete channel coverage is retained for auditing, not shown as a market quote.
-     if(qualified){
-       get("best").textContent=Number(s.best_ratio).toFixed(2);
-       [["30000","d3"],["100000","d10"],["120000","d12"]].forEach(([k,id])=>{
-         const d=s.depth&&s.depth[k];
-         get(id).textContent=d?Number(d.ratio_wan_per_cny).toFixed(2):"库存不足";
-       });
-     }
-     get("time").textContent=new Date(s.observed_at).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
+     get("time").textContent=fmtTime(s.observed_at);
      get("source").textContent=String(s.offers_count)+" / "+String(s.successful_channels);
+     if(!qualified(s)){
+       const partial=get("partial-preview");
+       partial.hidden=false;
+       partial.textContent="最新观察（覆盖不足，不能作为全市场最高价）：已返回的 "+
+         s.offers_count+" 条挂牌中最高 "+fmtRatio(s)+" 万金币/元；成功通道 "+
+         s.successful_channels+"/"+(s.attempted_channels||"未知")+
+         "，采样时间 "+fmtTime(s.observed_at)+"。此数据不参与 K 线或大额购买估算。";
+     }
    }
    if(!s){
      get("status").textContent=entry.name+"暂无有效记录，首次实网采集成功后会自动出现。";
    }else{
      const total=s.attempted_channels;
-     const quality=(s.quality==="usable"||(s.quality==null&&s.successful_channels>=2&&s.offers_count>=5));
+     const quality=qualified(s);
      get("status").textContent=entry.name+"最新采样："+s.observed_at+
        "；成功通道 "+s.successful_channels+(total?"/"+total:"（总数未知）")+
        "，挂牌 "+s.offers_count+" 条。"+
-       (quality?"已纳入走势图。":"渠道覆盖不足，仅存档，不参与 K 线。")+
+       (quality?"已纳入走势图。":"渠道覆盖不足，仅作参考、不参与 K 线。")+
        (total&&s.successful_channels<total?" 注意：部分来源尚未返回数据。":"")+
-       " 以上为挂牌估算，非成交价。";
+       " 以上为挂牌估算，非成交价。"+(lastQualified&&!quality?" 顶部价格卡片来自较早的合格快照，请核对其时间。":"");
    }
    render();
    // Collection failures are health metadata, never synthetic OHLC points.
@@ -176,6 +199,56 @@ async function loadRegion(regionId,updateUrl=true){
    get("status").textContent=entry.name+"历史读取失败："+err.message+"。请等待首次成功采集或检查 GitHub Actions。";
  }
 }
+async function loadOverview(){
+ const root=get("overview");
+ const entries=await Promise.all(availableRegions.map(async entry=>{
+   try{
+     const response=await fetch("./data/"+encodeURIComponent(entry.id)+".json",{cache:"no-store"});
+     if(!response.ok)throw Error("HTTP "+response.status);
+     const data=await response.json();
+     if(data.region!==entry.id||!Array.isArray(data.samples))throw Error("invalid history");
+     const ordered=data.samples.slice().sort((a,b)=>a.observed_at.localeCompare(b.observed_at));
+     return {entry,latest:ordered[ordered.length-1],valid:ordered.slice().reverse().find(qualified)};
+   }catch(err){return {entry,error:err.message};}
+ }));
+ root.replaceChildren();
+ for(const r of entries){
+   const button=document.createElement("button");
+   button.type="button";
+   button.dataset.region=r.entry.id;
+   button.dataset.selected=String(r.entry.id===activeRegion);
+   const name=document.createElement("strong");
+   name.textContent=r.entry.name;
+   button.append(name);
+   const summary=document.createElement("span");
+   if(r.error)summary.textContent="历史数据读取失败";
+   else if(!r.latest)summary.textContent="尚无采集快照";
+   else if(qualified(r.latest))
+     summary.textContent="合格 "+fmtRatio(r.latest)+" 万/元 · "+r.latest.offers_count+" 条";
+   else
+     summary.textContent="覆盖不足 · 观察 "+fmtRatio(r.latest)+" 万/元 · "+r.latest.offers_count+" 条";
+   button.append(summary);
+   if(r.valid&&!qualified(r.latest)){
+     const previous=document.createElement("span");
+     previous.textContent="最近合格 "+fmtRatio(r.valid)+" 万/元 · "+fmtTime(r.valid.observed_at);
+     button.append(previous);
+   }
+   if(r.latest){
+     const stamp=document.createElement("span");
+     stamp.textContent="最新采样 "+fmtTime(r.latest.observed_at);
+     button.append(stamp);
+   }
+   root.append(button);
+ }
+}
+get("overview").addEventListener("click",event=>{
+ const button=event.target.closest("button[data-region]");
+ if(!button)return;
+ loadRegion(button.dataset.region);
+ for(const b of get("overview").querySelectorAll("button[data-region]"))
+   b.dataset.selected=String(b===button);
+});
+
 async function init(){
  try{
    const response=await fetch("./data/regions.json",{cache:"no-store"});
@@ -192,6 +265,7 @@ async function init(){
    const query=new URLSearchParams(location.search).get("region");
    const selected=availableRegions.some(x=>x.id===query)?query:(data.default_region||"kua2");
    await loadRegion(selected,false);
+   await loadOverview();
  }catch(err){
    get("status").textContent="跨区配置读取失败："+err.message+"；请确认 GitHub Pages 已部署最新版。";
    resetView();
