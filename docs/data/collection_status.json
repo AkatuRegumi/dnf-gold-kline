@@ -2,19 +2,19 @@
   "schema_version": 1,
   "regions": {
     "kua1": {
-      "attempted_at": "2026-10-11T13:45:21+00:00",
+      "attempted_at": "2026-10-11T14:03:38+00:00",
       "outcome": "success",
-      "quality": "usable"
+      "quality": "partial"
     },
     "kua3b": {
-      "attempted_at": "2026-10-11T13:45:33+00:00",
+      "attempted_at": "2026-10-11T14:03:53+00:00",
       "outcome": "success",
-      "quality": "usable"
+      "quality": "partial"
     },
     "kua6": {
-      "attempted_at": "2026-10-11T13:45:45+00:00",
+      "attempted_at": "2026-10-11T14:04:07+00:00",
       "outcome": "success",
-      "quality": "usable"
+      "quality": "partial"
     }
   }
 }
