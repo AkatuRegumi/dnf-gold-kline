@@ -89,6 +89,42 @@ class MarketTest(unittest.TestCase):
             self.assertEqual((passed, failed), (1, 1))
             self.assertFalse((Path(temp) / "kua1.json").exists())
             self.assertTrue((Path(temp) / "kua2.json").exists())
+            import json
+            health = json.loads((Path(temp) / "collection_status.json").read_text())
+            self.assertEqual(health["regions"]["kua1"]["outcome"], "failed")
+            self.assertEqual(health["regions"]["kua2"]["outcome"], "success")
+
+    def test_explicit_groups_survive_delayed_start(self):
+        from collector.collect import regions, pick_regions
+        from datetime import datetime, timezone
+        opts = regions()
+        expected = [
+            ["kua1", "kua3b", "kua6"],
+            ["kua2", "kua4", "kua7"],
+            ["kua3a", "kua5", "kua8"],
+        ]
+        late = datetime(2026, 10, 11, 11, 59, tzinfo=timezone.utc)
+        for i, ids in enumerate(expected):
+            self.assertEqual([r["id"] for r in pick_regions(opts, f"group{i}", late)], ids)
+
+    def test_collection_health_separate_from_quotes(self):
+        import json
+        from collector.collect import save_attempt, save_sample
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        with TemporaryDirectory() as tmp:
+            data_dir = Path(tmp)
+            snap = {"region": "kua6", "observed_at": "2026-10-11T00:00:00+00:00"}
+            save_sample("kua6", snap, data_dir)
+            save_attempt("kua6", "failed", data_dir, reason="ValueError: script missing")
+            self.assertEqual(json.loads((data_dir / "kua6.json").read_text())["samples"], [snap])
+            status = json.loads((data_dir / "collection_status.json").read_text())
+            self.assertEqual(status["regions"]["kua6"]["outcome"], "failed")
+            self.assertIn("script missing", status["regions"]["kua6"]["reason"])
+            save_attempt("kua6", "success", data_dir, quality="partial")
+            status = json.loads((data_dir / "collection_status.json").read_text())
+            self.assertEqual(status["regions"]["kua6"]["quality"], "partial")
+            self.assertNotIn("reason", status["regions"]["kua6"])
 
     def test_history(self):
         sample = {"observed_at": "2026-10-11T00:00:00+00:00", "source": "yxdr"}

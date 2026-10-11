@@ -80,6 +80,8 @@ function render(){
  canvas.width=Math.round(width*pixel);canvas.height=Math.round(height*pixel);
  ctx.setTransform(pixel,0,0,pixel,0,0);ctx.clearRect(0,0,width,height);
  const data=build(),tip=get("tip");
+ // A previous region's mouse handler closes over its old candles.
+ canvas.onmousemove=null;
  if(!data.length){ctx.fillStyle="#9aafc6";ctx.textAlign="center";ctx.font="16px system-ui";ctx.fillText("等待第一条真实报价",width/2,height/2);tip.textContent="暂时没有历史报价。采集成功后这里会自动出现走势图。";return;}
  const left=50,right=18,top=27,bottom=40,w=width-left-right,h=height-top-bottom;
  const low=Math.min(...data.map(x=>x.low)),high=Math.max(...data.map(x=>x.high)),margin=Math.max(0.8,(high-low)*0.14);
@@ -130,11 +132,15 @@ async function loadRegion(regionId,updateUrl=true){
    const s=samples[samples.length-1];
    get("count").textContent=String(samples.length);
    if(s){
-     get("best").textContent=Number(s.best_ratio).toFixed(2);
-     [["30000","d3"],["100000","d10"],["120000","d12"]].forEach(([k,id])=>{
-       const d=s.depth&&s.depth[k];
-       get(id).textContent=d?Number(d.ratio_wan_per_cny).toFixed(2):"库存不足";
-     });
+     const qualified=s.quality==="usable"||(s.quality==null&&s.successful_channels>=2&&s.offers_count>=5);
+     // Incomplete channel coverage is retained for auditing, not shown as a market quote.
+     if(qualified){
+       get("best").textContent=Number(s.best_ratio).toFixed(2);
+       [["30000","d3"],["100000","d10"],["120000","d12"]].forEach(([k,id])=>{
+         const d=s.depth&&s.depth[k];
+         get(id).textContent=d?Number(d.ratio_wan_per_cny).toFixed(2):"库存不足";
+       });
+     }
      get("time").textContent=new Date(s.observed_at).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
      get("source").textContent=String(s.offers_count)+" / "+String(s.successful_channels);
    }
@@ -151,6 +157,19 @@ async function loadRegion(regionId,updateUrl=true){
        " 以上为挂牌估算，非成交价。";
    }
    render();
+   // Collection failures are health metadata, never synthetic OHLC points.
+   try{
+     const response=await fetch("./data/collection_status.json",{cache:"no-store"});
+     if(response.ok){
+       const health=await response.json();
+       if(version!==loadVersion)return;
+       const record=health.regions&&health.regions[regionId];
+       if(record&&record.outcome==="failed"){
+         const stamp=new Date(record.attempted_at).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
+         get("status").textContent+=" 最近一次尝试（"+stamp+"）失败："+record.reason+"；原有行情未覆盖。";
+       }
+     }
+   }catch(_ignored){/* Optional health metadata must not break history display. */}
  }catch(err){
    if(version!==loadVersion)return;
    resetView();

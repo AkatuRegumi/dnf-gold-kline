@@ -129,6 +129,42 @@ def save_sample(region_id: str, sample: dict, data_dir: Path = DATA_DIR) -> None
     os.replace(temp, path)
 
 
+def save_attempt(region_id: str, outcome: str, data_dir: Path = DATA_DIR, *,
+                 quality: str | None = None, reason: str | None = None) -> None:
+    """Persist collection health separately; never invent or mutate market samples."""
+    if outcome not in ("success", "failed"):
+        raise ValueError("invalid collection outcome")
+    path = data_dir / "collection_status.json"
+    status = (json.loads(path.read_text(encoding="utf-8")) if path.exists()
+              else {"schema_version": 1, "regions": {}})
+    if status.get("schema_version") != 1 or not isinstance(status.get("regions"), dict):
+        raise ValueError("invalid collection status schema")
+    record = {
+        "attempted_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "outcome": outcome,
+    }
+    if outcome == "success" and quality in ("usable", "partial"):
+        record["quality"] = quality
+    if outcome == "failed":
+        record["reason"] = (reason or "unknown collection error")[:160]
+    status["regions"][region_id] = record
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(".tmp")
+    temp.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(temp, path)
+
+
+def error_reason(exc: Exception) -> str:
+    """Keep the public health record useful without storing URLs or credentials."""
+    if isinstance(exc, HTTPError):
+        return f"HTTP {exc.code}"
+    if isinstance(exc, URLError):
+        return "upstream network error"
+    if isinstance(exc, (ValueError, RuntimeError, KeyError, json.JSONDecodeError)):
+        return f"{type(exc).__name__}: {str(exc)[:130]}"
+    return type(exc).__name__
+
+
 def run(selected: list[dict], data_dir: Path = DATA_DIR) -> tuple[int, int]:
     passed, failed = 0, 0
     for index, region in enumerate(selected):
@@ -138,6 +174,7 @@ def run(selected: list[dict], data_dir: Path = DATA_DIR) -> tuple[int, int]:
         try:
             sample = collect(region)
             save_sample(region_id, sample, data_dir)
+            save_attempt(region_id, "success", data_dir, quality=sample.get("quality"))
             passed += 1
             print(f'[{region_id}] saved: quality={sample.get("quality", "unknown")} '
                   f'best={sample.get("best_ratio", "?")} offers={sample.get("offers_count", "?")} '
@@ -145,7 +182,9 @@ def run(selected: list[dict], data_dir: Path = DATA_DIR) -> tuple[int, int]:
         except (ValueError, RuntimeError, HTTPError, URLError, TimeoutError, OSError,
                 KeyError, json.JSONDecodeError) as exc:
             failed += 1
-            print(f"[{region_id}] failed: {type(exc).__name__}: {str(exc)[:200]}", flush=True)
+            reason = error_reason(exc)
+            save_attempt(region_id, "failed", data_dir, reason=reason)
+            print(f"[{region_id}] failed: {reason}", flush=True)
     return passed, failed
 
 
@@ -153,7 +192,11 @@ def pick_regions(options: list[dict], requested: str, now: datetime | None = Non
     """Three staggered groups, each polled twice per UTC day at 4-hour intervals."""
     if requested == "all":
         return options
+    if requested in ("group0", "group1", "group2"):
+        slot = int(requested[-1])
+        return [item for i, item in enumerate(options) if i % 3 == slot]
     if requested == "scheduled":
+        # Manual/push fallback only; scheduled Actions pin groups to cron identity.
         stamp = now if now is not None else datetime.now(timezone.utc)
         slot = (stamp.astimezone(timezone.utc).hour // 4) % 3
         return [item for i, item in enumerate(options) if i % 3 == slot]
@@ -164,7 +207,7 @@ def main() -> None:
     options = regions()
     parser = argparse.ArgumentParser(description="Capture real DNF market quotes by cross-region")
     parser.add_argument("--region", default="scheduled",
-                        choices=["scheduled", "all"] + [r["id"] for r in options])
+                        choices=["scheduled", "all", "group0", "group1", "group2"] + [r["id"] for r in options])
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
     args = parser.parse_args()
     selected = pick_regions(options, args.region)

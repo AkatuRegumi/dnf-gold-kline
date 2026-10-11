@@ -1,7 +1,10 @@
 name: Capture DNF gold quote
 on:
   schedule:
-    - cron: '23 */4 * * *' # three markets/sweep, six sweeps/day UTC
+    # Select by the triggering cron expression, NOT delayed runner wall-clock time.
+    - cron: '23 0,12 * * *' # group0: kua1, kua3b, kua6
+    - cron: '23 4,16 * * *' # group1: kua2, kua4, kua7
+    - cron: '23 8,20 * * *' # group2: kua3a, kua5, kua8
   workflow_dispatch:
     inputs:
       region:
@@ -26,14 +29,30 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+        id: checkout
         with:
           persist-credentials: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Collect independent snapshots for each region
-        run: python -m collector.collect --region "${{ github.event.inputs.region || 'scheduled' }}"
-      - name: Commit only genuine new data
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          REQUESTED_REGION: ${{ github.event.inputs.region || 'scheduled' }}
+        run: |
+          selected="$REQUESTED_REGION"
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            case "$EVENT_SCHEDULE" in
+              '23 0,12 * * *') selected=group0 ;;
+              '23 4,16 * * *') selected=group1 ;;
+              '23 8,20 * * *') selected=group2 ;;
+              *) echo "Unknown schedule: $EVENT_SCHEDULE" >&2; exit 1 ;;
+            esac
+          fi
+          python -m collector.collect --region "$selected"
+      - name: Commit genuine data and collection health
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
         run: |
           if git diff --quiet -- docs/data/; then
             echo 'No new data'; exit 0
