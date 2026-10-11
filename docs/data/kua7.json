@@ -27,6 +27,24 @@
         },
         "120000": null
       }
+    },
+    {
+      "observed_at": "2026-10-11T06:03:40+00:00",
+      "quality": "partial",
+      "source": "yxdr",
+      "market": "listed_asks",
+      "region": "kua7",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua7",
+      "successful_channels": 2,
+      "attempted_channels": 4,
+      "failed_channels": 2,
+      "best_ratio": 89.7436,
+      "offers_count": 4,
+      "depth": {
+        "30000": null,
+        "100000": null,
+        "120000": null
+      }
     }
   ]
 }
