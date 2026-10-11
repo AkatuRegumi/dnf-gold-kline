@@ -41,6 +41,19 @@ def main():
                 return
             record = {"http": response.status, **safe_channel(response.request)}
             try:
+                headers = response.request.all_headers()
+                record["request_headers"] = {
+                    "content_type": headers.get("content-type"),
+                    "accept": headers.get("accept"),
+                    "origin": headers.get("origin"),
+                    "referer_domain": urlparse(headers.get("referer", "")).netloc,
+                    "x_requested_with": headers.get("x-requested-with"),
+                    "has_cookie": bool(headers.get("cookie")),
+                    "chrome_user_agent": "Chrome/" in headers.get("user-agent", ""),
+                }
+            except Exception as exc:
+                record["header_error"] = type(exc).__name__
+            try:
                 obj = response.json()
                 if isinstance(obj, dict):
                     rows = obj.get("data")
@@ -50,6 +63,8 @@ def main():
                         "rows": len(rows) if isinstance(rows, list) else None,
                         "response_keys": sorted(obj.keys()),
                         "code": obj.get("code") if isinstance(obj.get("code"), (int, bool)) else None,
+                        "debug_type": type(obj.get("debug")).__name__,
+                        "debug_keys": sorted(obj["debug"].keys()) if isinstance(obj.get("debug"), dict) else None,
                     })
                 else:
                     record["response_type"] = type(obj).__name__

@@ -103,7 +103,9 @@ def collect(region: dict) -> dict:
                 payload_kind = type(offers).__name__
                 payload_size = len(offers) if isinstance(offers, list) else 0
                 keys = ",".join(sorted(response.keys())) if isinstance(response, dict) else "non-dict"
-                print(f"[{region_id}] channel={pf_id} unavailable success={outcome} data={payload_kind} count={payload_size} keys={keys}", flush=True)
+                debug = response.get("debug") if isinstance(response, dict) else None
+                debug_keys = ",".join(sorted(debug.keys())) if isinstance(debug, dict) else ""
+                print(f"[{region_id}] channel={pf_id} unavailable success={outcome} data={payload_kind} count={payload_size} keys={keys} debug_type={type(debug).__name__} debug_keys={debug_keys}", flush=True)
         except (ValueError, TypeError, KeyError, HTTPError, URLError, TimeoutError, OSError) as exc:
             print(f"[{region_id}] channel error: {type(exc).__name__}")
         time.sleep(0.5)
