@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'tools/diagnose_yxdr_browser.py'
+      - 'tools/diagnose_yxdr_headers.py'
       - '.github/workflows/diagnose_yxdr.yml'
 permissions:
   contents: read
@@ -21,5 +22,7 @@ jobs:
         run: python -m pip install --disable-pip-version-check playwright
       - name: Observe ordinary public browser requests (no login)
         run: python -u tools/diagnose_yxdr_browser.py
+      - name: Compare ordinary HTTP header shapes once for channel 44
+        run: python -u -m tools.diagnose_yxdr_headers
       - name: Run the existing low-frequency collector once in scratch space
         run: python -u -m collector.collect --region kua7 --data-dir "$RUNNER_TEMP/yxdr-diagnostic"
