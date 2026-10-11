@@ -31,6 +31,36 @@
           "ratio_wan_per_cny": 90.6592
         }
       }
+    },
+    {
+      "observed_at": "2026-10-11T13:45:33+00:00",
+      "quality": "usable",
+      "source": "yxdr",
+      "market": "listed_asks",
+      "region": "kua3b",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua3b",
+      "successful_channels": 3,
+      "attempted_channels": 4,
+      "failed_channels": 1,
+      "best_ratio": 92.8505,
+      "offers_count": 39,
+      "depth": {
+        "30000": {
+          "target_wan": 30000,
+          "quoted_cny": 325.08,
+          "ratio_wan_per_cny": 92.2846
+        },
+        "100000": {
+          "target_wan": 100000,
+          "quoted_cny": 1087.19,
+          "ratio_wan_per_cny": 91.9803
+        },
+        "120000": {
+          "target_wan": 120000,
+          "quoted_cny": 1307.4,
+          "ratio_wan_per_cny": 91.7849
+        }
+      }
     }
   ]
 }
