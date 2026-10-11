@@ -109,7 +109,7 @@ function render(){
  const hover=get("chart-hover"),crossV=get("chart-cross-v"),crossH=get("chart-cross-h"),cursorPrice=get("chart-cursor-price");
  // Clear all handlers and overlays: region/period changes must never reuse stale candles.
  for(const overlay of [hover,crossV,crossH,cursorPrice])overlay.hidden=true;
- canvas.onpointermove=null;canvas.onpointerleave=null;canvas.onpointerdown=null;canvas.onkeydown=null;
+ canvas.onpointermove=null;canvas.onpointerleave=null;canvas.onpointerdown=null;canvas.onkeydown=null;canvas.onblur=null;
  if(!data.length){ctx.fillStyle="#9aafc6";ctx.textAlign="center";ctx.font="16px system-ui";ctx.fillText("等待第一条真实报价",width/2,height/2);tip.textContent="暂时没有历史报价。采集成功后这里会自动出现走势图。";return;}
  const left=50,right=18,top=27,bottom=40,w=width-left-right,h=height-top-bottom;
  const low=Math.min(...data.map(x=>x.low)),high=Math.max(...data.map(x=>x.high)),margin=Math.max(0.8,(high-low)*0.14);
