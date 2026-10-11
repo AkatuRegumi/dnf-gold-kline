@@ -1,0 +1,25 @@
+name: Public YXDR browser versus collector probe
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/diagnose_yxdr_browser.py'
+      - '.github/workflows/diagnose_yxdr.yml'
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install browser automation client (uses preinstalled Chrome)
+        run: python -m pip install --disable-pip-version-check playwright
+      - name: Observe ordinary public browser requests (no login)
+        run: python -u tools/diagnose_yxdr_browser.py
+      - name: Run the existing low-frequency collector once in scratch space
+        run: python -u -m collector.collect --region kua7 --data-dir "$RUNNER_TEMP/yxdr-diagnostic"
