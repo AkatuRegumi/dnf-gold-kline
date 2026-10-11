@@ -11,6 +11,7 @@ import hashlib
 from http.cookiejar import CookieJar
 import json
 import os
+import re
 from pathlib import Path
 import time
 from urllib.error import HTTPError, URLError
@@ -57,6 +58,23 @@ def fetch_text(opener, url: str):
         return response.read(5_000_000).decode("utf-8-sig", "replace")
 
 
+def classify_channel_response(response) -> str:
+    """Classify a failed public response without storing untrusted debug text."""
+    if not isinstance(response, dict):
+        return "unexpected_response"
+    if response.get("success") in (True, 1, "true") and isinstance(response.get("data"), list):
+        return "ok"
+    debug = response.get("debug")
+    message = debug[:400].lower() if isinstance(debug, str) else ""
+    if re.search(r"429|rate.?limit|too many|throttl|限流|请求频繁|操作频繁", message):
+        return "rate_limited"
+    if re.search(r"captcha|forbidden|access denied|blocked|验证码|访问拒绝", message):
+        return "access_restricted"
+    if re.search(r"timeout|temporar|upstream|超时|暂不可用|服务异常", message):
+        return "upstream_unavailable"
+    return "upstream_rejected"
+
+
 def collect(region: dict) -> dict:
     region_id, url = region["id"], region["source_url"]
     opener = build_opener(HTTPCookieProcessor(CookieJar()))
@@ -71,7 +89,9 @@ def collect(region: dict) -> dict:
     if not isinstance(token, dict) or not token.get("time") or not token.get("secret"):
         raise RuntimeError("未取得上游公开页面请求校验信息")
     rows, successes, attempts = [], 0, 0
+    channel_outcomes = []
     for channel in channels:
+        pf_id = None
         try:
             params = json.loads(channel["data"])
             if params.get("CoinNo") != "yxb" or params.get("GId") != 1838:
@@ -92,12 +112,19 @@ def collect(region: dict) -> dict:
             offers = response.get("data") if isinstance(response, dict) else None
             if valid and isinstance(offers, list):
                 successes += 1
+                valid_count = 0
                 for raw in offers:
                     if isinstance(raw, dict):
                         parsed = listing(raw, params.get("PfName", str(pf_id)))
                         if parsed:
                             rows.append(parsed)
+                            valid_count += 1
+                channel_outcomes.append({
+                    "id": pf_id, "state": "ok", "returned": len(offers),
+                    "accepted": valid_count,
+                })
             else:
+                channel_outcomes.append({"id": pf_id, "state": classify_channel_response(response)})
                 # Safe structural diagnostics only; never log signatures, IDs or raw payloads.
                 outcome = str(response.get("success"))[:12] if isinstance(response, dict) else "non-dict"
                 payload_kind = type(offers).__name__
@@ -107,6 +134,8 @@ def collect(region: dict) -> dict:
                 debug_keys = ",".join(sorted(debug.keys())) if isinstance(debug, dict) else ""
                 print(f"[{region_id}] channel={pf_id} unavailable success={outcome} data={payload_kind} count={payload_size} keys={keys} debug_type={type(debug).__name__} debug_keys={debug_keys}", flush=True)
         except (ValueError, TypeError, KeyError, HTTPError, URLError, TimeoutError, OSError) as exc:
+            if pf_id is not None:
+                channel_outcomes.append({"id": pf_id, "state": "request_error"})
             print(f"[{region_id}] channel error: {type(exc).__name__}")
         time.sleep(0.5)
     if not successes:
@@ -121,6 +150,7 @@ def collect(region: dict) -> dict:
         "source_url": url,
         "successful_channels": successes, "attempted_channels": attempts,
         "failed_channels": attempts - successes,
+        "channel_outcomes": channel_outcomes,
         **summary,
     }
 
@@ -137,7 +167,8 @@ def save_sample(region_id: str, sample: dict, data_dir: Path = DATA_DIR) -> None
 
 
 def save_attempt(region_id: str, outcome: str, data_dir: Path = DATA_DIR, *,
-                 quality: str | None = None, reason: str | None = None) -> None:
+                 quality: str | None = None, reason: str | None = None,
+                 sample: dict | None = None) -> None:
     """Persist collection health separately; never invent or mutate market samples."""
     if outcome not in ("success", "failed"):
         raise ValueError("invalid collection outcome")
@@ -154,7 +185,18 @@ def save_attempt(region_id: str, outcome: str, data_dir: Path = DATA_DIR, *,
         record["quality"] = quality
     if outcome == "failed":
         record["reason"] = (reason or "unknown collection error")[:160]
+    if sample is not None and outcome == "success":
+        record["offers_count"] = int(sample.get("offers_count", 0))
+        record["successful_channels"] = int(sample.get("successful_channels", 0))
+        record["attempted_channels"] = int(sample.get("attempted_channels", 0))
+        record["channel_outcomes"] = sample.get("channel_outcomes", [])
     status["regions"][region_id] = record
+    # Keep a short rolling, append-only diagnostic history for frequency decisions.
+    history = status.setdefault("history", {})
+    if not isinstance(history, dict):
+        raise ValueError("invalid collection status history")
+    history.setdefault(region_id, []).append(dict(record))
+    history[region_id] = history[region_id][-40:]
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_suffix(".tmp")
     temp.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -181,7 +223,7 @@ def run(selected: list[dict], data_dir: Path = DATA_DIR) -> tuple[int, int]:
         try:
             sample = collect(region)
             save_sample(region_id, sample, data_dir)
-            save_attempt(region_id, "success", data_dir, quality=sample.get("quality"))
+            save_attempt(region_id, "success", data_dir, quality=sample.get("quality"), sample=sample)
             passed += 1
             print(f'[{region_id}] saved: quality={sample.get("quality", "unknown")} '
                   f'best={sample.get("best_ratio", "?")} offers={sample.get("offers_count", "?")} '

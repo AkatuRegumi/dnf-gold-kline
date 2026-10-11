@@ -126,6 +126,44 @@ class MarketTest(unittest.TestCase):
             self.assertEqual(status["regions"]["kua6"]["quality"], "partial")
             self.assertNotIn("reason", status["regions"]["kua6"])
 
+    def test_safe_channel_diagnostics(self):
+        from collector.collect import classify_channel_response
+        self.assertEqual(classify_channel_response({"success": 1, "data": []}), "ok")
+        self.assertEqual(classify_channel_response({"success": 0, "debug": "Too many requests"}), "rate_limited")
+        self.assertEqual(classify_channel_response({"success": 0, "debug": "Captcha required"}), "access_restricted")
+        self.assertEqual(classify_channel_response({"success": 0, "debug": "secret=PRIVATE"}), "upstream_rejected")
+
+    def test_attempt_history_does_not_rewrite_market_data(self):
+        from collector.collect import save_attempt
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        import json
+        with TemporaryDirectory() as td:
+            folder = Path(td)
+            for i in range(44):
+                save_attempt("kua7", "success", folder, quality="partial", sample={
+                    "offers_count": 4, "successful_channels": 2, "attempted_channels": 4,
+                    "channel_outcomes": [{"id": 44, "state": "upstream_rejected"}],
+                })
+            state = json.loads((folder / "collection_status.json").read_text())
+            self.assertEqual(len(state["history"]["kua7"]), 40)
+            self.assertEqual(state["regions"]["kua7"]["channel_outcomes"][0]["id"], 44)
+            self.assertFalse((folder / "kua7.json").exists())
+
+    def test_cadence_requires_history_and_consistency(self):
+        from tools.evaluate_sampling_health import evaluate
+        from datetime import datetime, timedelta, timezone
+        end = datetime(2026, 10, 11, 15, tzinfo=timezone.utc)
+        def records(bad=False):
+            return [{
+                "attempted_at": (end - timedelta(hours=(11-i)*8)).isoformat(),
+                "outcome": "success", "quality": "partial" if (bad and i % 3 == 0) else "usable",
+                "successful_channels": 2 if bad else 4, "attempted_channels": 4
+            } for i in range(12)]
+        self.assertEqual(evaluate(records()[:3], now=end)["status"], "insufficient")
+        self.assertEqual(evaluate(records(), now=end)["status"], "candidate")
+        self.assertEqual(evaluate(records(bad=True), now=end)["status"], "hold")
+
     def test_history(self):
         sample = {"observed_at": "2026-10-11T00:00:00+00:00", "source": "yxdr"}
         h = append_history({"samples": []}, sample)
