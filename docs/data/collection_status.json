@@ -2,7 +2,7 @@
   "schema_version": 1,
   "regions": {
     "kua1": {
-      "attempted_at": "2026-10-11T15:42:10+00:00",
+      "attempted_at": "2026-10-12T06:12:19+00:00",
       "outcome": "success",
       "quality": "partial",
       "offers_count": 4,
@@ -32,11 +32,11 @@
       ]
     },
     "kua3b": {
-      "attempted_at": "2026-10-11T15:42:24+00:00",
+      "attempted_at": "2026-10-12T06:12:31+00:00",
       "outcome": "success",
-      "quality": "partial",
-      "offers_count": 4,
-      "successful_channels": 2,
+      "quality": "usable",
+      "offers_count": 39,
+      "successful_channels": 3,
       "attempted_channels": 4,
       "channel_outcomes": [
         {
@@ -53,7 +53,9 @@
         },
         {
           "id": 40,
-          "state": "upstream_rejected"
+          "state": "ok",
+          "returned": 35,
+          "accepted": 35
         },
         {
           "id": 44,
@@ -62,7 +64,7 @@
       ]
     },
     "kua6": {
-      "attempted_at": "2026-10-11T15:42:40+00:00",
+      "attempted_at": "2026-10-12T06:12:44+00:00",
       "outcome": "success",
       "quality": "partial",
       "offers_count": 4,
@@ -303,6 +305,36 @@
             "state": "upstream_rejected"
           }
         ]
+      },
+      {
+        "attempted_at": "2026-10-12T06:12:19+00:00",
+        "outcome": "success",
+        "quality": "partial",
+        "offers_count": 4,
+        "successful_channels": 2,
+        "attempted_channels": 4,
+        "channel_outcomes": [
+          {
+            "id": 30,
+            "state": "ok",
+            "returned": 0,
+            "accepted": 0
+          },
+          {
+            "id": 17,
+            "state": "ok",
+            "returned": 4,
+            "accepted": 4
+          },
+          {
+            "id": 40,
+            "state": "upstream_rejected"
+          },
+          {
+            "id": 44,
+            "state": "upstream_rejected"
+          }
+        ]
       }
     ],
     "kua3b": [
@@ -335,11 +367,73 @@
             "state": "upstream_rejected"
           }
         ]
+      },
+      {
+        "attempted_at": "2026-10-12T06:12:31+00:00",
+        "outcome": "success",
+        "quality": "usable",
+        "offers_count": 39,
+        "successful_channels": 3,
+        "attempted_channels": 4,
+        "channel_outcomes": [
+          {
+            "id": 30,
+            "state": "ok",
+            "returned": 0,
+            "accepted": 0
+          },
+          {
+            "id": 17,
+            "state": "ok",
+            "returned": 4,
+            "accepted": 4
+          },
+          {
+            "id": 40,
+            "state": "ok",
+            "returned": 35,
+            "accepted": 35
+          },
+          {
+            "id": 44,
+            "state": "upstream_rejected"
+          }
+        ]
       }
     ],
     "kua6": [
       {
         "attempted_at": "2026-10-11T15:42:40+00:00",
+        "outcome": "success",
+        "quality": "partial",
+        "offers_count": 4,
+        "successful_channels": 2,
+        "attempted_channels": 4,
+        "channel_outcomes": [
+          {
+            "id": 30,
+            "state": "ok",
+            "returned": 0,
+            "accepted": 0
+          },
+          {
+            "id": 17,
+            "state": "ok",
+            "returned": 4,
+            "accepted": 4
+          },
+          {
+            "id": 40,
+            "state": "upstream_rejected"
+          },
+          {
+            "id": 44,
+            "state": "upstream_rejected"
+          }
+        ]
+      },
+      {
+        "attempted_at": "2026-10-12T06:12:44+00:00",
         "outcome": "success",
         "quality": "partial",
         "offers_count": 4,
