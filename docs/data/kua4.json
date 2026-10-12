@@ -143,6 +143,60 @@
           "ratio_wan_per_cny": 85.0137
         }
       }
+    },
+    {
+      "observed_at": "2026-10-12T12:05:10+00:00",
+      "quality": "usable",
+      "source": "yxdr",
+      "market": "listed_asks",
+      "region": "kua4",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua4",
+      "successful_channels": 3,
+      "attempted_channels": 4,
+      "failed_channels": 1,
+      "channel_outcomes": [
+        {
+          "id": 30,
+          "state": "ok",
+          "returned": 0,
+          "accepted": 0
+        },
+        {
+          "id": 17,
+          "state": "ok",
+          "returned": 4,
+          "accepted": 4
+        },
+        {
+          "id": 40,
+          "state": "ok",
+          "returned": 34,
+          "accepted": 34
+        },
+        {
+          "id": 44,
+          "state": "upstream_rejected"
+        }
+      ],
+      "best_ratio": 88.9851,
+      "offers_count": 38,
+      "depth": {
+        "30000": {
+          "target_wan": 30000,
+          "quoted_cny": 344.01,
+          "ratio_wan_per_cny": 87.2066
+        },
+        "100000": {
+          "target_wan": 100000,
+          "quoted_cny": 1149.35,
+          "ratio_wan_per_cny": 87.0058
+        },
+        "120000": {
+          "target_wan": 120000,
+          "quoted_cny": 1380.74,
+          "ratio_wan_per_cny": 86.9098
+        }
+      }
     }
   ]
 }
