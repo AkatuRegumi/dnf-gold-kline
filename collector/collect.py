@@ -88,13 +88,19 @@ def collect(region: dict) -> dict:
                        {"GId": 1838, "GsId": meta.get("GsId")}, url)
     if not isinstance(token, dict) or not token.get("time") or not token.get("secret"):
         raise RuntimeError("未取得上游公开页面请求校验信息")
-    rows, successes, attempts = [], 0, 0
+    # Ordinary listings feed public K-line and depth estimates.
+    # Wholesale (yxbpf) may have minimum-order restrictions or overlap retail stock;
+    # preserve its observations separately rather than adding it to executable depth.
+    rows, wholesale_rows, successes, attempts = [], [], 0, 0
+    successful_retail_platforms: set[int] = set()
     channel_outcomes = []
     for channel in channels:
         pf_id = None
+        coin_no = None
         try:
             params = json.loads(channel["data"])
-            if params.get("CoinNo") != "yxb" or params.get("GId") != 1838:
+            coin_no = params.get("CoinNo")
+            if coin_no not in ("yxb", "yxbpf") or params.get("GId") != 1838:
                 continue
             pf_id = int(params["PfId"])
             attempts += 1
@@ -112,19 +118,25 @@ def collect(region: dict) -> dict:
             offers = response.get("data") if isinstance(response, dict) else None
             if valid and isinstance(offers, list):
                 successes += 1
+                if coin_no == "yxb":
+                    successful_retail_platforms.add(pf_id)
                 valid_count = 0
+                destination = wholesale_rows if coin_no == "yxbpf" else rows
                 for raw in offers:
                     if isinstance(raw, dict):
                         parsed = listing(raw, params.get("PfName", str(pf_id)))
                         if parsed:
-                            rows.append(parsed)
+                            destination.append(parsed)
                             valid_count += 1
                 channel_outcomes.append({
-                    "id": pf_id, "state": "ok", "returned": len(offers),
-                    "accepted": valid_count,
+                    "id": pf_id, "coin_no": coin_no, "state": "ok",
+                    "returned": len(offers), "accepted": valid_count,
                 })
             else:
-                channel_outcomes.append({"id": pf_id, "state": classify_channel_response(response)})
+                channel_outcomes.append({
+                    "id": pf_id, "coin_no": coin_no,
+                    "state": classify_channel_response(response),
+                })
                 # Safe structural diagnostics only; never log signatures, IDs or raw payloads.
                 outcome = str(response.get("success"))[:12] if isinstance(response, dict) else "non-dict"
                 payload_kind = type(offers).__name__
@@ -135,22 +147,33 @@ def collect(region: dict) -> dict:
                 print(f"[{region_id}] channel={pf_id} unavailable success={outcome} data={payload_kind} count={payload_size} keys={keys} debug_type={type(debug).__name__} debug_keys={debug_keys}", flush=True)
         except (ValueError, TypeError, KeyError, HTTPError, URLError, TimeoutError, OSError) as exc:
             if pf_id is not None:
-                channel_outcomes.append({"id": pf_id, "state": "request_error"})
+                channel_outcomes.append({
+                    "id": pf_id, "coin_no": coin_no,
+                    "state": "request_error",
+                })
             print(f"[{region_id}] channel error: {type(exc).__name__}")
         time.sleep(0.5)
     if not successes:
         raise RuntimeError("没有任何成功的报价通道")
     summary = summarize(rows)
-    # Heuristic only: non-comprehensive partial coverage remains a real sample.
-    quality = "usable" if successes >= 2 and summary["offers_count"] >= 5 else "partial"
+    # Two successful categories from one platform are NOT two retail providers.
+    quality = ("usable" if len(successful_retail_platforms) >= 2
+               and summary["offers_count"] >= 5 else "partial")
+    wholesale = summarize(wholesale_rows) if wholesale_rows else None
     return {
         "observed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "quality": quality,
         "source": "yxdr", "market": "listed_asks", "region": region_id,
         "source_url": url,
         "successful_channels": successes, "attempted_channels": attempts,
+        "successful_retail_platforms": len(successful_retail_platforms),
         "failed_channels": attempts - successes,
         "channel_outcomes": channel_outcomes,
+        "wholesale_observation": (
+            {"offers_count": wholesale["offers_count"],
+             "best_ratio": wholesale["best_ratio"],
+             "market": "listed_wholesale_asks"} if wholesale is not None else None
+        ),
         **summary,
     }
 
@@ -190,6 +213,9 @@ def save_attempt(region_id: str, outcome: str, data_dir: Path = DATA_DIR, *,
         record["successful_channels"] = int(sample.get("successful_channels", 0))
         record["attempted_channels"] = int(sample.get("attempted_channels", 0))
         record["channel_outcomes"] = sample.get("channel_outcomes", [])
+        record["successful_retail_platforms"] = sample.get("successful_retail_platforms")
+        wholesale = sample.get("wholesale_observation")
+        record["wholesale_offers_count"] = (wholesale or {}).get("offers_count", 0)
     status["regions"][region_id] = record
     # Keep a short rolling, append-only diagnostic history for frequency decisions.
     history = status.setdefault("history", {})

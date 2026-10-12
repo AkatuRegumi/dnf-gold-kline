@@ -172,5 +172,91 @@ class MarketTest(unittest.TestCase):
             append_history(h, sample)
 
 
+    def test_browser_five_channels_capture_wholesale_separately(self):
+        """Browser fixture: 7881 has independent retail and wholesale categories."""
+        import json
+        from unittest.mock import patch
+        from collector.collect import collect
+
+        def channel(pf_id, coin_no, label):
+            return {"data": json.dumps({
+                "PfId": pf_id, "PfName": label, "GId": 1838, "CoinNo": coin_no
+            }), "sign": f"{pf_id}-{coin_no}"}
+        channels = [
+            channel(30, "yxb", "YXB321"),
+            channel(17, "yxb", "UU898"),
+            channel(40, "yxb", "DD373"),
+            channel(44, "yxbpf", "7881"),
+            channel(44, "yxb", "7881"),
+            channel(44, "wrong", "7881"),
+        ]
+        script = ("window.bijiaqiChanels=" + json.dumps(channels) + ";"
+                  "window.bijiaqiResult=" + json.dumps({"GId": 1838, "GsId": 31}) + ";")
+        requested = []
+        def offer(url, amount, money):
+            return {"BuyUrl": url, "Amount": amount, "Money": money,
+                    "Price": money / amount}
+        def fake_json(_opener, url, payload, _referer):
+            if url.endswith("/coinsalesecret"):
+                return {"time": "fixed-time", "secret": "fixed-secret"}
+            params = json.loads(payload["data"])
+            requested.append((params["PfId"], params["CoinNo"]))
+            if params["PfId"] == 30:
+                rows = []
+            elif params["PfId"] == 17:
+                rows = [offer("https://example.test/uu", 4000, 46)]
+            elif params["PfId"] == 40:
+                rows = [offer("https://example.test/dd", 550, 6.05)]
+            elif params["CoinNo"] == "yxbpf":
+                rows = [offer("https://example.test/bulk", 4000, 44)]
+            else:
+                rows = [offer("https://example.test/retail", 9000, 101)]
+            return {"index": 0, "success": 1, "data": rows, "debug": None}
+        with patch("collector.collect.fetch_text", side_effect=[
+            '<script src="/js/CoinSale_yxb_example.js"></script>', script
+        ]), patch("collector.collect.fetch_json", side_effect=fake_json), patch("collector.collect.time.sleep"):
+            sample = collect({
+                "id": "kua2", "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2"
+            })
+        self.assertEqual(len(requested), 5)
+        self.assertEqual([c for c in requested if c[0] == 44],
+                         [(44, "yxbpf"), (44, "yxb")])
+        self.assertEqual(sample["successful_channels"], 5)
+        self.assertEqual(sample["successful_retail_platforms"], 4)
+        self.assertEqual(sample["offers_count"], 3)
+        self.assertEqual(sample["quality"], "partial")  # same >=5 retail threshold
+        self.assertEqual(sample["wholesale_observation"]["offers_count"], 1)
+        self.assertEqual(sample["wholesale_observation"]["best_ratio"], 90.9091)
+        self.assertEqual(sample["best_ratio"], 90.9091)  # DD373 retail, not bulk
+        self.assertEqual([c["coin_no"] for c in sample["channel_outcomes"] if c["id"] == 44],
+                         ["yxbpf", "yxb"])
+
+    def test_wholesale_success_never_upgrades_partial_retail_sample(self):
+        import json
+        from unittest.mock import patch
+        from collector.collect import collect
+        entries = [
+            {"data": json.dumps({"PfId": 44, "PfName": "7881", "GId": 1838,
+                                  "CoinNo": category}), "sign": category}
+            for category in ("yxbpf", "yxb")
+        ]
+        script = ("window.bijiaqiChanels=" + json.dumps(entries) + ";"
+                  "window.bijiaqiResult=" + json.dumps({"GId": 1838}) + ";")
+        def fake_json(_opener, url, payload, _referer):
+            if url.endswith("/coinsalesecret"):
+                return {"time": "time", "secret": "secret"}
+            category = json.loads(payload["data"])["CoinNo"]
+            if category == "yxbpf":
+                return {"success": 1, "data": [{"Price": 0.011, "Amount": 4000,
+                                               "Money": 44, "BuyUrl": "https://example.test/w"}]}
+            return {"success": 0, "data": None, "debug": None}
+        with patch("collector.collect.fetch_text", side_effect=[
+            '<script src="/js/CoinSale_yxb_example.js"></script>', script
+        ]), patch("collector.collect.fetch_json", side_effect=fake_json), patch("collector.collect.time.sleep"):
+            from collector.collect import collect
+            with self.assertRaisesRegex(ValueError, "没有可核实库存"):
+                collect({"id": "kua2", "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2"})
+
+
 if __name__ == "__main__":
     unittest.main()
