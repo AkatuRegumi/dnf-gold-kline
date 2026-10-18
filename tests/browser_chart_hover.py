@@ -34,16 +34,26 @@ def main():
             assert page.locator("#chart-cross-h").is_visible(), "horizontal guide should appear"
             assert page.locator("#chart-cursor-price").is_visible(), "pointer price should appear"
             hover_text = page.locator("#chart-hover").inner_text()
+            assert "挂牌比例" in hover_text and ("低覆盖" in hover_text or "合格快照" in hover_text), hover_text
+            assert "采样观察" in page.locator("#chart-mode").inner_text()
+            page.locator('#chart-mode button[data-mode="qualified"]').click()
+            assert page.locator("#period").is_visible(), "period choices should appear in K-line mode"
+            canvas.hover(position={"x": 300, "y": 170})
+            assert page.locator("#chart-hover").is_visible()
+            hover_text = page.locator("#chart-hover").inner_text()
             assert "开盘" in hover_text and "收盘" in hover_text and "合格采样" in hover_text, hover_text
+            page.locator('#chart-mode button[data-mode="observed"]').click()
+            assert not page.locator("#period").is_visible(), "period is only meaningful for K-line candles"
             page.mouse.move(3, 3)
             assert not page.locator("#chart-hover").is_visible(), "hover should dismiss"
             page.locator("#region-select").select_option("kua7")
             page.wait_for_function("document.getElementById('chart-title').textContent.includes('跨七')")
             assert not page.locator("#chart-hover").is_visible(), "region switch should clear old hover"
+            page.locator('#chart-mode button[data-mode="qualified"]').click()
             page.locator('#period button[data-kind="week"]').click()
             assert page.locator('#period button[data-kind="week"]').get_attribute("aria-pressed") == "true"
             assert not errors, "browser errors: " + "; ".join(errors)
-            print("PASS: real Chrome Canvas hover/crosshair/label/clear/region/period")
+            print("PASS: Chrome observation/strict-K-line modes and Canvas hover/crosshair/region/period")
             browser.close()
     finally:
         server.shutdown()
