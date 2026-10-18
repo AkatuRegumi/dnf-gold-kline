@@ -93,6 +93,7 @@ def collect(region: dict) -> dict:
     # preserve its observations separately rather than adding it to executable depth.
     rows, wholesale_rows, successes, attempts = [], [], 0, 0
     successful_retail_platforms: set[int] = set()
+    contributing_retail_platforms: set[int] = set()
     channel_outcomes = []
     for channel in channels:
         pf_id = None
@@ -128,6 +129,8 @@ def collect(region: dict) -> dict:
                         if parsed:
                             destination.append(parsed)
                             valid_count += 1
+                if coin_no == "yxb" and valid_count > 0:
+                    contributing_retail_platforms.add(pf_id)
                 channel_outcomes.append({
                     "id": pf_id, "coin_no": coin_no, "state": "ok",
                     "returned": len(offers), "accepted": valid_count,
@@ -156,8 +159,9 @@ def collect(region: dict) -> dict:
     if not successes:
         raise RuntimeError("没有任何成功的报价通道")
     summary = summarize(rows)
-    # Two successful categories from one platform are NOT two retail providers.
-    quality = ("usable" if len(successful_retail_platforms) >= 2
+    # Only platforms with actual accepted retail listings count towards coverage.
+    # An HTTP-successful but empty source is not independent market evidence.
+    quality = ("usable" if len(contributing_retail_platforms) >= 2
                and summary["offers_count"] >= 5 else "partial")
     wholesale = summarize(wholesale_rows) if wholesale_rows else None
     return {
@@ -167,6 +171,7 @@ def collect(region: dict) -> dict:
         "source_url": url,
         "successful_channels": successes, "attempted_channels": attempts,
         "successful_retail_platforms": len(successful_retail_platforms),
+        "contributing_retail_platforms": len(contributing_retail_platforms),
         "failed_channels": attempts - successes,
         "channel_outcomes": channel_outcomes,
         "wholesale_observation": (
@@ -214,6 +219,7 @@ def save_attempt(region_id: str, outcome: str, data_dir: Path = DATA_DIR, *,
         record["attempted_channels"] = int(sample.get("attempted_channels", 0))
         record["channel_outcomes"] = sample.get("channel_outcomes", [])
         record["successful_retail_platforms"] = sample.get("successful_retail_platforms")
+        record["contributing_retail_platforms"] = sample.get("contributing_retail_platforms")
         wholesale = sample.get("wholesale_observation")
         record["wholesale_offers_count"] = (wholesale or {}).get("offers_count", 0)
     status["regions"][region_id] = record
