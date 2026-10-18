@@ -18,13 +18,17 @@ class FrontendInteractionTest(unittest.TestCase):
         self.assertIn('hover.style.left=', HTML)
         self.assertIn('hover.style.top=', HTML)
 
-    def test_region_switch_resets_old_hover_and_partial_stays_filtered(self):
+    def test_region_switch_and_strict_kline_keep_partial_separate(self):
         self.assertIn("for(const overlay of [hover,crossV,crossH,cursorPrice])overlay.hidden=true;", HTML)
         self.assertIn("canvas.onpointermove=null;", HTML)
         self.assertIn("if(!reliable||!Number.isFinite(ratio)||ratio<=0)continue;", HTML)
         self.assertIn("const reliable=qualified(s);", HTML)
         self.assertIn("resetView();", HTML)
-        self.assertIn("hover.textContent=d.date+", HTML)
+        self.assertIn('if(chartMode==="observed")', HTML)
+        self.assertIn('if(!reliable||!Number.isFinite(ratio)||ratio<=0)continue;', HTML)
+        self.assertIn('hover.textContent=d.observed?', HTML)
+        self.assertIn('id="chart-mode"', HTML)
+        self.assertIn('contributing_retail_platforms', HTML)
 
 
 if __name__ == "__main__":
