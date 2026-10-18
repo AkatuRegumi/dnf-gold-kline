@@ -13,7 +13,7 @@ small,.sub,.muted{color:var(--muted)}.sub{margin:6px 0 26px}
 .stat strong{font-size:27px;display:block;font-variant-numeric:tabular-nums;white-space:nowrap}.stat small{font-size:12px}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:13px;margin-top:13px}
 .top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.buttons{display:flex;gap:5px}button{color:var(--muted);background:#1a2b42;border:1px solid #324761;border-radius:8px;padding:7px 10px;cursor:pointer}
-button[aria-pressed="true"]{background:#25574f;color:#91f5d1;border-color:#347d71}
+button[aria-pressed="true"]{background:#25574f;color:#91f5d1;border-color:#347d71}.buttons[hidden]{display:none}
 canvas{display:block;width:100%;height:375px;cursor:crosshair;touch-action:pan-y}
 .chart-stage{position:relative}
 .chart-cross-v,.chart-cross-h{position:absolute;pointer-events:none;z-index:2}
@@ -47,16 +47,17 @@ canvas{display:block;width:100%;height:375px;cursor:crosshair;touch-action:pan-y
 <div class="panel stat"><small>买 12 亿综合比例</small><strong id="d12">—</strong><small>挂牌库存估算</small></div>
 </div>
 <div class="layout">
-<section class="panel"><div class="top"><div><h2 id="chart-title">跨二金币报价 K 线</h2><small>每元换到的金币越多，表示金币越便宜。无采样不补造。</small></div>
-<div class="buttons" id="period"><button data-kind="day" aria-pressed="true">日 K</button><button data-kind="week" aria-pressed="false">周 K</button><button data-kind="month" aria-pressed="false">月 K</button></div></div>
+<section class="panel"><div class="top"><div><h2 id="chart-title">跨二 · 采样观察走势</h2><small>每元换到的金币越多，表示金币越便宜。无采样不补造。</small></div>
+<div class="buttons" id="chart-mode"><button data-mode="observed" aria-pressed="true">采样观察</button><button data-mode="qualified" aria-pressed="false">合格 K 线</button></div>
+<div class="buttons" id="period" hidden><button data-kind="day" aria-pressed="true">日 K</button><button data-kind="week" aria-pressed="false">周 K</button><button data-kind="month" aria-pressed="false">月 K</button></div></div>
 <div class="chart-stage" id="chart-stage">
-<canvas id="chart" role="img" tabindex="0" aria-label="金币报价日线周线月线图；可用左右方向键查看日期"></canvas>
+<canvas id="chart" role="img" tabindex="0" aria-label="挂牌报价离散采样观察走势；可用左右方向键查看快照"></canvas>
 <div class="chart-cross-v" id="chart-cross-v" hidden aria-hidden="true"></div>
 <div class="chart-cross-h" id="chart-cross-h" hidden aria-hidden="true"></div>
 <div class="chart-cursor-price" id="chart-cursor-price" hidden aria-hidden="true"></div>
 <div class="chart-hover" id="chart-hover" hidden role="tooltip"></div>
 </div>
-<div id="tip">等待真实报价数据。</div><small>仅采用满足最低有效来源门槛（至少两个通道、五条挂单）的快照形成 K 线；覆盖不足的真实记录仍保留，不参与绘图。这不是全市场覆盖率保证。</small></section>
+<div id="tip">等待真实报价数据。</div><small id="chart-note">橙色采样点代表覆盖不足，绿色代表合格；虚线连接的是离散挂牌快照，不是连续成交行情。此视图不生成 K 线或大额深度估算。</small></section>
 <aside class="panel"><h2>行情元信息</h2>
 <div class="info"><small>数据来源</small><strong><a id="market-link" href="https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2" target="_blank" rel="noopener">游戏达人跨二比价 ↗</a></strong></div>
 <div class="info"><small>最后成功采样（北京时间）</small><strong id="time">—</strong></div>
@@ -71,9 +72,20 @@ canvas{display:block;width:100%;height:375px;cursor:crosshair;touch-action:pan-y
 </main>
 <script>
 "use strict";
-let samples=[],kind="day",activeRegion="kua2",availableRegions=[],loadVersion=0;
+let samples=[],kind="day",chartMode="observed",activeRegion="kua2",availableRegions=[],loadVersion=0;
 const get=id=>document.getElementById(id);
-const qualified=s=>!!s&&(s.quality==="usable"||(s.quality==null&&s.successful_channels>=2&&s.offers_count>=5));
+const qualified=s=>{
+ if(!s||!(s.quality==="usable"||(s.quality==null&&s.successful_channels>=2&&s.offers_count>=5)))return false;
+ if(Number(s.offers_count)<5)return false;
+ if(Number.isFinite(s.contributing_retail_platforms))return s.contributing_retail_platforms>=2;
+ // Older records may have marked empty HTTP-successful providers as independent.
+ // Re-evaluate them when per-channel accepted counts are available.
+ if(Array.isArray(s.channel_outcomes)&&s.channel_outcomes.some(c=>c.coin_no==="yxb")){
+   const contributors=new Set(s.channel_outcomes.filter(c=>c.coin_no==="yxb"&&c.state==="ok"&&Number(c.accepted)>0).map(c=>String(c.id)));
+   return contributors.size>=2;
+ }
+ return true; // Historical samples without breakdown retain their stored assessment.
+};
 const fmtTime=stamp=>new Date(stamp).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
 const fmtRatio=s=>Number.isFinite(Number(s?.best_ratio))?Number(s.best_ratio).toFixed(2):"—";
 const localDate=stamp=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(stamp));
@@ -86,6 +98,15 @@ function key(stamp){
  return d.toISOString().slice(0,10);
 }
 function build(){
+ if(chartMode==="observed"){
+   // Each point is an actual snapshot. Never derive fake OHLC from partial quotes.
+   return samples.filter(s=>Number.isFinite(Number(s.best_ratio))&&Number(s.best_ratio)>0).map(s=>{
+     const ratio=Number(s.best_ratio);
+     return {date:fmtTime(s.observed_at),open:ratio,high:ratio,low:ratio,close:ratio,n:1,
+       observed:true,reliable:qualified(s),sourceOffers:Number(s.offers_count)||0,
+       sourceChannels:Number(s.successful_channels)||0};
+   });
+ }
  const groups=new Map();
  for(const s of samples){
    const ratio=Number(s.best_ratio);
@@ -118,13 +139,19 @@ function render(){
  ctx.font="11px system-ui";ctx.textAlign="left";
  for(let i=0;i<5;i++){const val=minimum+(maximum-minimum)*i,yy=y(val);ctx.strokeStyle="#2a3d54";ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(width-right,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#9aafc6";ctx.fillText(val.toFixed(1),3,yy+4);}
  const step=w/data.length,candleWidth=Math.max(2,Math.min(17,step*0.62));
+ if(chartMode==="observed"&&data.length>1){
+   ctx.strokeStyle="#d6a867";ctx.lineWidth=1.4;ctx.setLineDash([4,5]);ctx.beginPath();
+   data.forEach((d,i)=>{if(i===0)ctx.moveTo(x(i),y(d.close));else ctx.lineTo(x(i),y(d.close));});
+   ctx.stroke();ctx.setLineDash([]);
+ }
  data.forEach((d,i)=>{
    const xx=x(i),color=d.close>=d.open?"#42d9a4":"#ff6e81";ctx.strokeStyle=color;ctx.fillStyle=color;
-   if(d.n===1){ctx.beginPath();ctx.arc(xx,y(d.close),Math.max(2,Math.min(4,step*.23)),0,Math.PI*2);ctx.fill();}
+   if(d.observed){ctx.fillStyle=d.reliable?"#42d9a4":"#e6b56f";ctx.beginPath();ctx.arc(xx,y(d.close),Math.max(3,Math.min(5,step*.23)),0,Math.PI*2);ctx.fill();}
+   else if(d.n===1){ctx.beginPath();ctx.arc(xx,y(d.close),Math.max(2,Math.min(4,step*.23)),0,Math.PI*2);ctx.fill();}
    else{ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,y(d.high));ctx.lineTo(xx,y(d.low));ctx.stroke();const yy=Math.min(y(d.open),y(d.close)),hh=Math.max(2,Math.abs(y(d.close)-y(d.open)));ctx.fillRect(xx-candleWidth/2,yy,candleWidth,hh);}
-   const frequency=Math.max(1,Math.ceil(data.length/7));if(i%frequency===0||i===data.length-1){ctx.fillStyle="#9aafc6";ctx.textAlign="center";ctx.fillText(d.date.slice(5),xx,height-14);}
+   const frequency=Math.max(1,Math.ceil(data.length/7));if(i%frequency===0||i===data.length-1){ctx.fillStyle="#9aafc6";ctx.textAlign="center";ctx.fillText(d.observed?d.date.slice(5,16):d.date.slice(5),xx,height-14);}
  });
- const describe=d=>d.date+" 开 "+d.open.toFixed(2)+" / 高 "+d.high.toFixed(2)+" / 低 "+d.low.toFixed(2)+" / 收 "+d.close.toFixed(2)+" 万/元 · "+d.n+" 次采样";
+ const describe=d=>d.observed?(d.date+" · "+d.close.toFixed(2)+" 万/元 · "+(d.reliable?"合格":"低覆盖")+" · "+d.sourceOffers+" 条挂牌"):d.date+" 开 "+d.open.toFixed(2)+" / 高 "+d.high.toFixed(2)+" / 低 "+d.low.toFixed(2)+" / 收 "+d.close.toFixed(2)+" 万/元 · "+d.n+" 次合格采样";
  const last=data[data.length-1],defaultReadout=describe(last);
  tip.textContent=defaultReadout;
  let hoveredIndex=null;
@@ -145,11 +172,15 @@ function render(){
    crossH.style.left=left+"px";crossH.style.top=yy+"px";crossH.style.width=w+"px";
    cursorPrice.style.top=yy+"px";cursorPrice.textContent=pointerRatio.toFixed(2);
    for(const overlay of [crossV,crossH,cursorPrice])overlay.hidden=false;
-   hover.textContent=d.date+
-     "\n开盘 "+d.open.toFixed(2)+"    最高 "+d.high.toFixed(2)+
-     "\n最低 "+d.low.toFixed(2)+"    收盘 "+d.close.toFixed(2)+
-     "\n合格采样 "+d.n+" 次"+
-     "\n单位：万金币/元（挂牌报价）";
+   hover.textContent=d.observed?
+     d.date+"\n挂牌比例 "+d.close.toFixed(2)+" 万/元"+
+       "\n"+(d.reliable?"合格快照":"低覆盖观察（非合格行情）")+
+       "\n挂牌 "+d.sourceOffers+" 条 · 成功通道 "+d.sourceChannels+
+       "\n非连续成交行情":
+     d.date+"\n开盘 "+d.open.toFixed(2)+"    最高 "+d.high.toFixed(2)+
+       "\n最低 "+d.low.toFixed(2)+"    收盘 "+d.close.toFixed(2)+
+       "\n合格采样 "+d.n+" 次"+
+       "\n单位：万金币/元（挂牌报价）";
    hover.hidden=false;
    // Measure after showing the popup; keep it inside the chart on narrow screens.
    const popupWidth=hover.offsetWidth,popupHeight=hover.offsetHeight;
@@ -189,7 +220,7 @@ async function loadRegion(regionId,updateUrl=true){
  activeRegion=regionId;
  const version=++loadVersion;
  get("region-select").value=regionId;
- get("chart-title").textContent=entry.name+"金币报价 K 线";
+ get("chart-title").textContent=entry.name+(chartMode==="observed"?" · 采样观察走势":"金币报价 K 线");
  get("market-link").href=entry.source_url;
  get("market-link").textContent="游戏达人"+entry.name+"比价 ↗";
  if(updateUrl){
@@ -335,6 +366,19 @@ async function init(){
  }
 }
 get("region-select").addEventListener("change",event=>loadRegion(event.target.value));
+get("chart-mode").addEventListener("click",e=>{
+ const b=e.target.closest("button[data-mode]");if(!b)return;
+ chartMode=b.dataset.mode;
+ get("period").hidden=chartMode==="observed";
+ get("chart-mode").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+ get("chart-note").textContent=chartMode==="observed"?
+   "橙色采样点代表覆盖不足，绿色代表合格；虚线连接的是离散挂牌快照，不是连续成交行情。此视图不生成 K 线或大额深度估算。":
+   "合格 K 线仅采用至少两个有实际挂单的独立普通金币平台、至少五条有效挂牌的快照；单次仅画点，不制造蜡烛图。";
+ const entry=availableRegions.find(x=>x.id===activeRegion);
+ if(entry)get("chart-title").textContent=entry.name+(chartMode==="observed"?" · 采样观察走势":"金币报价 K 线");
+ get("chart").setAttribute("aria-label",chartMode==="observed"?"挂牌报价离散采样观察走势；可用左右方向键查看快照":"金币报价合格 K 线；可用左右方向键查看日期");
+ render();
+});
 get("period").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.kind;document.querySelectorAll("#period button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));render();});
 window.addEventListener("resize",()=>render());
 init();
