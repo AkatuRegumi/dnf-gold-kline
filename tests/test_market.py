@@ -223,6 +223,7 @@ class MarketTest(unittest.TestCase):
                          [(44, "yxbpf"), (44, "yxb")])
         self.assertEqual(sample["successful_channels"], 5)
         self.assertEqual(sample["successful_retail_platforms"], 4)
+        self.assertEqual(sample["contributing_retail_platforms"], 3)
         self.assertEqual(sample["offers_count"], 3)
         self.assertEqual(sample["quality"], "partial")  # same >=5 retail threshold
         self.assertEqual(sample["wholesale_observation"]["offers_count"], 1)
@@ -256,6 +257,40 @@ class MarketTest(unittest.TestCase):
             from collector.collect import collect
             with self.assertRaisesRegex(ValueError, "没有可核实库存"):
                 collect({"id": "kua2", "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2"})
+
+    def test_empty_retail_platform_cannot_certify_usable_market(self):
+        """Two successful requests, but only one actually contributes five lots."""
+        import json
+        from unittest.mock import patch
+        from collector.collect import collect
+
+        def channel(platform):
+            return {"data": json.dumps({
+                "PfId": platform, "PfName": str(platform), "GId": 1838, "CoinNo": "yxb"
+            }), "sign": str(platform)}
+
+        script = ("window.bijiaqiChanels=" + json.dumps([channel(30), channel(17)]) + ";"
+                  "window.bijiaqiResult=" + json.dumps({"GId": 1838}) + ";")
+
+        def fake_json(_opener, url, payload, _referer):
+            if url.endswith("/coinsalesecret"):
+                return {"time": "fixed-time", "secret": "fixed-secret"}
+            provider = json.loads(payload["data"])["PfId"]
+            offers = [] if provider == 30 else [
+                {"Price": 0.0115, "Amount": 1000, "Money": 11.5,
+                 "BuyUrl": f"https://example.test/lot{i}"} for i in range(5)
+            ]
+            return {"success": 1, "data": offers}
+
+        with patch("collector.collect.fetch_text", side_effect=[
+            '<script src="/js/CoinSale_yxb_example.js"></script>', script
+        ]), patch("collector.collect.fetch_json", side_effect=fake_json), patch("collector.collect.time.sleep"):
+            sample = collect({"id": "kua2", "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2"})
+        self.assertEqual(sample["offers_count"], 5)
+        self.assertEqual(sample["successful_retail_platforms"], 2)
+        self.assertEqual(sample["contributing_retail_platforms"], 1)
+        self.assertEqual(sample["quality"], "partial")
+        self.assertEqual([v["accepted"] for v in sample["channel_outcomes"]], [0, 5])
 
 
 if __name__ == "__main__":
