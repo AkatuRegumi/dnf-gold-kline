@@ -42,6 +42,9 @@ def fetch_json(opener, url: str, payload: dict, referer: str):
         "Content-Type": "application/json",
         "Accept": "application/json",
         "Referer": referer,
+        # Same-origin XHR POSTs carry an Origin header in actual browsers.
+        # Keep our own explicit bot User-Agent; do not impersonate a browser.
+        "Origin": BASE,
         "X-Requested-With": "XMLHttpRequest",
         "User-Agent": "Mozilla/5.0 (compatible; DNF-Gold-Kline/0.2)",
     })
@@ -59,20 +62,50 @@ def fetch_text(opener, url: str):
 
 
 def classify_channel_response(response) -> str:
-    """Classify a failed public response without storing untrusted debug text."""
+    """Return a conservative, explicitly evidenced error family."""
     if not isinstance(response, dict):
         return "unexpected_response"
-    if response.get("success") in (True, 1, "true") and isinstance(response.get("data"), list):
-        return "ok"
+    if response.get("success") in (True, 1, "true"):
+        return "ok" if isinstance(response.get("data"), list) else "unexpected_response"
     debug = response.get("debug")
-    message = debug[:400].lower() if isinstance(debug, str) else ""
+    message = debug[:2000].lower() if isinstance(debug, str) else ""
+    # Only recognized words justify a category. A generic success=0 with
+    # arbitrary debug text is not evidence of an access ban or rate limit.
     if re.search(r"429|rate.?limit|too many|throttl|限流|请求频繁|操作频繁", message):
         return "rate_limited"
-    if re.search(r"captcha|forbidden|access denied|blocked|验证码|访问拒绝", message):
+    if re.search(r"captcha|forbidden|access denied|blocked|验证码|访问拒绝|403", message):
         return "access_restricted"
-    if re.search(r"timeout|temporar|upstream|超时|暂不可用|服务异常", message):
+    if re.search(r"signat|invalid sign|签名|校验|token|secret|expired|过期|时间戳", message):
+        return "request_validation_failed"
+    if re.search(r"invalid param|bad request|参数错误|参数无效|参数异常", message):
+        return "request_invalid"
+    if re.search(r"timeout|temporar|upstream|超时|暂不可用|服务异常|502|503|504", message):
         return "upstream_unavailable"
-    return "upstream_rejected"
+    if re.search(r"no data|no offers|暂无数据|无数据|没有报价|无报价", message):
+        return "no_offers_reported"
+    return "unclassified_failure"
+
+
+def safe_response_diagnostics(response) -> dict:
+    """Bounded public diagnostics: never persist raw debug text or credentials.
+
+    SHA-256 is solely an equality fingerprint to compare failure responses
+    across runs. It is not used to authenticate or reverse-engineer a token.
+    """
+    if not isinstance(response, dict):
+        return {"response_kind": type(response).__name__}
+    debug = response.get("debug")
+    record = {
+        "response_kind": "json_object",
+        "debug_kind": type(debug).__name__,
+        "data_kind": type(response.get("data")).__name__,
+    }
+    if isinstance(debug, str) and debug:
+        record["debug_chars"] = min(len(debug), 10000)
+        record["debug_fingerprint"] = hashlib.sha256(
+            debug.encode("utf-8", errors="replace")
+        ).hexdigest()[:16]
+    return record
 
 
 def collect(region: dict) -> dict:
@@ -88,6 +121,7 @@ def collect(region: dict) -> dict:
                        {"GId": 1838, "GsId": meta.get("GsId")}, url)
     if not isinstance(token, dict) or not token.get("time") or not token.get("secret"):
         raise RuntimeError("未取得上游公开页面请求校验信息")
+    token_acquired_at = time.monotonic()
     # Ordinary listings feed public K-line and depth estimates.
     # Wholesale (yxbpf) may have minimum-order restrictions or overlap retail stock;
     # preserve its observations separately rather than adding it to executable depth.
@@ -114,7 +148,10 @@ def collect(region: dict) -> dict:
                 "cross": 0, "dnfCross": 1,
                 "time": token["time"], "secret": digest,
             }
+            request_started_at = time.monotonic()
+            token_age_s = round(max(0.0, request_started_at - token_acquired_at), 2)
             response = fetch_json(opener, BASE + "/bijia/coinsale", query, url)
+            request_ms = round(max(0.0, time.monotonic() - request_started_at) * 1000)
             valid = isinstance(response, dict) and response.get("success") in (True, 1, "true")
             offers = response.get("data") if isinstance(response, dict) else None
             if valid and isinstance(offers, list):
@@ -134,27 +171,32 @@ def collect(region: dict) -> dict:
                 channel_outcomes.append({
                     "id": pf_id, "coin_no": coin_no, "state": "ok",
                     "returned": len(offers), "accepted": valid_count,
+                    "request_ms": request_ms, "token_age_s": token_age_s,
                 })
             else:
-                channel_outcomes.append({
+                failure = {
                     "id": pf_id, "coin_no": coin_no,
                     "state": classify_channel_response(response),
-                })
-                # Safe structural diagnostics only; never log signatures, IDs or raw payloads.
-                outcome = str(response.get("success"))[:12] if isinstance(response, dict) else "non-dict"
-                payload_kind = type(offers).__name__
-                payload_size = len(offers) if isinstance(offers, list) else 0
-                keys = ",".join(sorted(response.keys())) if isinstance(response, dict) else "non-dict"
-                debug = response.get("debug") if isinstance(response, dict) else None
-                debug_keys = ",".join(sorted(debug.keys())) if isinstance(debug, dict) else ""
-                print(f"[{region_id}] channel={pf_id} unavailable success={outcome} data={payload_kind} count={payload_size} keys={keys} debug_type={type(debug).__name__} debug_keys={debug_keys}", flush=True)
+                    "request_ms": request_ms, "token_age_s": token_age_s,
+                    **safe_response_diagnostics(response),
+                }
+                channel_outcomes.append(failure)
+                # Never log raw debug, signatures, request payloads or cookies.
+                print(f"[{region_id}] channel={pf_id}/{coin_no} "
+                      f"state={failure['state']} debug_kind={failure['debug_kind']} "
+                      f"fingerprint={failure.get('debug_fingerprint', 'none')} "
+                      f"age_s={token_age_s} request_ms={request_ms}", flush=True)
         except (ValueError, TypeError, KeyError, HTTPError, URLError, TimeoutError, OSError) as exc:
             if pf_id is not None:
-                channel_outcomes.append({
+                failure = {
                     "id": pf_id, "coin_no": coin_no,
                     "state": "request_error",
-                })
-            print(f"[{region_id}] channel error: {type(exc).__name__}")
+                    "error_kind": type(exc).__name__,
+                }
+                if isinstance(exc, HTTPError):
+                    failure["http_status"] = exc.code
+                channel_outcomes.append(failure)
+            print(f"[{region_id}] channel error: {type(exc).__name__}", flush=True)
         time.sleep(0.5)
     if not successes:
         raise RuntimeError("没有任何成功的报价通道")
