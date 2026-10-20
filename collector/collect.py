@@ -129,7 +129,7 @@ def collect(region: dict) -> dict:
     # earlier visit. urllib only receives cookies via Set-Cookie. We record
     # strictly its presence, never a cookie value or a synthesized token.
     site_client_cookie_present = any(
-        cookie.name == "u_client" and cookie.domain == "www.yxdr.com"
+        cookie.name == "u_client" and cookie.domain.lstrip(".") in ("www.yxdr.com", "yxdr.com")
         for cookie in cookie_jar
     )
     print(f"[{region_id}] site_client_cookie_present={site_client_cookie_present}",
