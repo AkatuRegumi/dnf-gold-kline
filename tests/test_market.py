@@ -131,7 +131,8 @@ class MarketTest(unittest.TestCase):
         self.assertEqual(classify_channel_response({"success": 1, "data": []}), "ok")
         self.assertEqual(classify_channel_response({"success": 0, "debug": "Too many requests"}), "rate_limited")
         self.assertEqual(classify_channel_response({"success": 0, "debug": "Captcha required"}), "access_restricted")
-        self.assertEqual(classify_channel_response({"success": 0, "debug": "secret=PRIVATE"}), "upstream_rejected")
+        self.assertEqual(classify_channel_response({"success": 0, "debug": "secret=PRIVATE"}), "request_validation_failed")
+        self.assertEqual(classify_channel_response({"success": 0, "debug": "opaque-problem"}), "unclassified_failure")
 
     def test_attempt_history_does_not_rewrite_market_data(self):
         from collector.collect import save_attempt
