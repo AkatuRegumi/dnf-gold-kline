@@ -183,7 +183,7 @@ def collect(region: dict) -> dict:
                 channel_outcomes.append(failure)
                 # Never log raw debug, signatures, request payloads or cookies.
                 print(f"[{region_id}] channel={pf_id}/{coin_no} "
-                      f"state={failure['state']} debug_kind={failure['debug_kind']} "
+                      f"state={failure['state']} debug_kind={failure.get('debug_kind', 'none')} "
                       f"fingerprint={failure.get('debug_fingerprint', 'none')} "
                       f"age_s={token_age_s} request_ms={request_ms}", flush=True)
         except (ValueError, TypeError, KeyError, HTTPError, URLError, TimeoutError, OSError) as exc:
