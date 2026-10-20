@@ -40,7 +40,9 @@ def fetch_json(opener, url: str, payload: dict, referer: str):
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     request = Request(url, data=body, method="POST", headers={
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        # Accept negotiates response format; do not claim to be Firefox.
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.5",
         "Referer": referer,
         # Same-origin XHR POSTs carry an Origin header in actual browsers.
         # Keep our own explicit bot User-Agent; do not impersonate a browser.
@@ -110,7 +112,8 @@ def safe_response_diagnostics(response) -> dict:
 
 def collect(region: dict) -> dict:
     region_id, url = region["id"], region["source_url"]
-    opener = build_opener(HTTPCookieProcessor(CookieJar()))
+    cookie_jar = CookieJar()
+    opener = build_opener(HTTPCookieProcessor(cookie_jar))
     html = fetch_text(opener, url)
     script = fetch_text(opener, script_url(html))
     channels = assignment(script, "bijiaqiChanels")
@@ -122,6 +125,15 @@ def collect(region: dict) -> dict:
     if not isinstance(token, dict) or not token.get("time") or not token.get("secret"):
         raise RuntimeError("未取得上游公开页面请求校验信息")
     token_acquired_at = time.monotonic()
+    # A real browser may have a client cookie populated by JavaScript or an
+    # earlier visit. urllib only receives cookies via Set-Cookie. We record
+    # strictly its presence, never a cookie value or a synthesized token.
+    site_client_cookie_present = any(
+        cookie.name == "u_client" and cookie.domain == "www.yxdr.com"
+        for cookie in cookie_jar
+    )
+    print(f"[{region_id}] site_client_cookie_present={site_client_cookie_present}",
+          flush=True)
     # Ordinary listings feed public K-line and depth estimates.
     # Wholesale (yxbpf) may have minimum-order restrictions or overlap retail stock;
     # preserve its observations separately rather than adding it to executable depth.
@@ -211,6 +223,7 @@ def collect(region: dict) -> dict:
         "quality": quality,
         "source": "yxdr", "market": "listed_asks", "region": region_id,
         "source_url": url,
+        "site_client_cookie_present": site_client_cookie_present,
         "successful_channels": successes, "attempted_channels": attempts,
         "successful_retail_platforms": len(successful_retail_platforms),
         "contributing_retail_platforms": len(contributing_retail_platforms),
@@ -260,6 +273,7 @@ def save_attempt(region_id: str, outcome: str, data_dir: Path = DATA_DIR, *,
         record["successful_channels"] = int(sample.get("successful_channels", 0))
         record["attempted_channels"] = int(sample.get("attempted_channels", 0))
         record["channel_outcomes"] = sample.get("channel_outcomes", [])
+        record["site_client_cookie_present"] = sample.get("site_client_cookie_present")
         record["successful_retail_platforms"] = sample.get("successful_retail_platforms")
         record["contributing_retail_platforms"] = sample.get("contributing_retail_platforms")
         wholesale = sample.get("wholesale_observation")
