@@ -32,6 +32,11 @@ class BrowserResponseRegressionTest(unittest.TestCase):
         )
         self.assertEqual(result["success"], 1)
         self.assertEqual(opener.request.get_header("Origin"), BASE)
+        self.assertEqual(opener.request.get_header("Accept"),
+                         "application/json, text/javascript, */*; q=0.01")
+        self.assertEqual(opener.request.get_header("Accept-language"),
+                         "zh-CN,zh;q=0.9,en;q=0.5")
+        self.assertIsNone(opener.request.get_header("Cookie"))
         self.assertEqual(opener.request.get_header("Referer"), BASE + "/bijiaqi/dnf/youxibi/kua2")
         self.assertIn("DNF-Gold-Kline", opener.request.get_header("User-agent"))
         self.assertEqual(opener.timeout, 20)
@@ -113,6 +118,7 @@ class BrowserResponseRegressionTest(unittest.TestCase):
 
         self.assertEqual(len(observed), 5)
         self.assertEqual(sample["quality"], "usable")
+        self.assertFalse(sample["site_client_cookie_present"])
         self.assertEqual(sample["offers_count"], 10)
         self.assertEqual(sample["contributing_retail_platforms"], 3)
         self.assertEqual(sample["successful_retail_platforms"], 4)
