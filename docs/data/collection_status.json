@@ -2,11 +2,11 @@
   "schema_version": 1,
   "regions": {
     "kua1": {
-      "attempted_at": "2026-10-20T17:22:11+00:00",
+      "attempted_at": "2026-10-21T05:02:25+00:00",
       "outcome": "success",
-      "quality": "partial",
-      "offers_count": 4,
-      "successful_channels": 2,
+      "quality": "usable",
+      "offers_count": 39,
+      "successful_channels": 3,
       "attempted_channels": 5,
       "channel_outcomes": [
         {
@@ -15,7 +15,7 @@
           "state": "ok",
           "returned": 0,
           "accepted": 0,
-          "request_ms": 1506,
+          "request_ms": 1413,
           "token_age_s": 0.0
         },
         {
@@ -24,27 +24,24 @@
           "state": "ok",
           "returned": 4,
           "accepted": 4,
-          "request_ms": 1505,
-          "token_age_s": 2.01
+          "request_ms": 1138,
+          "token_age_s": 1.91
         },
         {
           "id": 40,
           "coin_no": "yxb",
-          "state": "unclassified_failure",
-          "request_ms": 1531,
-          "token_age_s": 4.01,
-          "response_kind": "json_object",
-          "debug_kind": "str",
-          "data_kind": "NoneType",
-          "debug_chars": 6,
-          "debug_fingerprint": "87e70fd1bb7a907a"
+          "state": "ok",
+          "returned": 35,
+          "accepted": 35,
+          "request_ms": 1569,
+          "token_age_s": 3.55
         },
         {
           "id": 44,
           "coin_no": "yxb",
           "state": "unclassified_failure",
-          "request_ms": 1500,
-          "token_age_s": 6.05,
+          "request_ms": 1112,
+          "token_age_s": 5.62,
           "response_kind": "json_object",
           "debug_kind": "str",
           "data_kind": "NoneType",
@@ -55,8 +52,8 @@
           "id": 44,
           "coin_no": "yxbpf",
           "state": "unclassified_failure",
-          "request_ms": 1443,
-          "token_age_s": 8.05,
+          "request_ms": 1371,
+          "token_age_s": 7.24,
           "response_kind": "json_object",
           "debug_kind": "str",
           "data_kind": "NoneType",
@@ -65,12 +62,12 @@
         }
       ],
       "site_client_cookie_present": true,
-      "successful_retail_platforms": 2,
-      "contributing_retail_platforms": 1,
+      "successful_retail_platforms": 3,
+      "contributing_retail_platforms": 2,
       "wholesale_offers_count": 0
     },
     "kua3b": {
-      "attempted_at": "2026-10-20T17:22:27+00:00",
+      "attempted_at": "2026-10-21T05:02:41+00:00",
       "outcome": "success",
       "quality": "partial",
       "offers_count": 4,
@@ -83,7 +80,7 @@
           "state": "ok",
           "returned": 0,
           "accepted": 0,
-          "request_ms": 1602,
+          "request_ms": 1212,
           "token_age_s": 0.0
         },
         {
@@ -92,15 +89,15 @@
           "state": "ok",
           "returned": 4,
           "accepted": 4,
-          "request_ms": 1483,
-          "token_age_s": 2.1
+          "request_ms": 2110,
+          "token_age_s": 1.71
         },
         {
           "id": 40,
           "coin_no": "yxb",
           "state": "unclassified_failure",
-          "request_ms": 1459,
-          "token_age_s": 4.09,
+          "request_ms": 1181,
+          "token_age_s": 4.32,
           "response_kind": "json_object",
           "debug_kind": "str",
           "data_kind": "NoneType",
@@ -111,8 +108,8 @@
           "id": 44,
           "coin_no": "yxb",
           "state": "unclassified_failure",
-          "request_ms": 1456,
-          "token_age_s": 6.05,
+          "request_ms": 1121,
+          "token_age_s": 6.0,
           "response_kind": "json_object",
           "debug_kind": "str",
           "data_kind": "NoneType",
@@ -123,8 +120,8 @@
           "id": 44,
           "coin_no": "yxbpf",
           "state": "unclassified_failure",
-          "request_ms": 1463,
-          "token_age_s": 8.0,
+          "request_ms": 1158,
+          "token_age_s": 7.62,
           "response_kind": "json_object",
           "debug_kind": "str",
           "data_kind": "NoneType",
@@ -138,7 +135,7 @@
       "wholesale_offers_count": 0
     },
     "kua6": {
-      "attempted_at": "2026-10-20T17:22:44+00:00",
+      "attempted_at": "2026-10-21T05:02:57+00:00",
       "outcome": "success",
       "quality": "partial",
       "offers_count": 4,
@@ -151,7 +148,7 @@
           "state": "ok",
           "returned": 0,
           "accepted": 0,
-          "request_ms": 1313,
+          "request_ms": 1179,
           "token_age_s": 0.0
         },
         {
@@ -160,15 +157,15 @@
           "state": "ok",
           "returned": 4,
           "accepted": 4,
-          "request_ms": 2518,
-          "token_age_s": 1.81
+          "request_ms": 2185,
+          "token_age_s": 1.68
         },
         {
           "id": 40,
           "coin_no": "yxb",
           "state": "unclassified_failure",
-          "request_ms": 1258,
-          "token_age_s": 4.83,
+          "request_ms": 1342,
+          "token_age_s": 4.36,
           "response_kind": "json_object",
           "debug_kind": "str",
           "data_kind": "NoneType",
@@ -179,8 +176,8 @@
           "id": 44,
           "coin_no": "yxb",
           "state": "unclassified_failure",
-          "request_ms": 1220,
-          "token_age_s": 6.59,
+          "request_ms": 1565,
+          "token_age_s": 6.21,
           "response_kind": "json_object",
           "debug_kind": "str",
           "data_kind": "NoneType",
@@ -191,8 +188,8 @@
           "id": 44,
           "coin_no": "yxbpf",
           "state": "unclassified_failure",
-          "request_ms": 1517,
-          "token_age_s": 8.31,
+          "request_ms": 1115,
+          "token_age_s": 8.27,
           "response_kind": "json_object",
           "debug_kind": "str",
           "data_kind": "NoneType",
@@ -1612,6 +1609,71 @@
         "successful_retail_platforms": 2,
         "contributing_retail_platforms": 1,
         "wholesale_offers_count": 0
+      },
+      {
+        "attempted_at": "2026-10-21T05:02:25+00:00",
+        "outcome": "success",
+        "quality": "usable",
+        "offers_count": 39,
+        "successful_channels": 3,
+        "attempted_channels": 5,
+        "channel_outcomes": [
+          {
+            "id": 30,
+            "coin_no": "yxb",
+            "state": "ok",
+            "returned": 0,
+            "accepted": 0,
+            "request_ms": 1413,
+            "token_age_s": 0.0
+          },
+          {
+            "id": 17,
+            "coin_no": "yxb",
+            "state": "ok",
+            "returned": 4,
+            "accepted": 4,
+            "request_ms": 1138,
+            "token_age_s": 1.91
+          },
+          {
+            "id": 40,
+            "coin_no": "yxb",
+            "state": "ok",
+            "returned": 35,
+            "accepted": 35,
+            "request_ms": 1569,
+            "token_age_s": 3.55
+          },
+          {
+            "id": 44,
+            "coin_no": "yxb",
+            "state": "unclassified_failure",
+            "request_ms": 1112,
+            "token_age_s": 5.62,
+            "response_kind": "json_object",
+            "debug_kind": "str",
+            "data_kind": "NoneType",
+            "debug_chars": 6,
+            "debug_fingerprint": "87e70fd1bb7a907a"
+          },
+          {
+            "id": 44,
+            "coin_no": "yxbpf",
+            "state": "unclassified_failure",
+            "request_ms": 1371,
+            "token_age_s": 7.24,
+            "response_kind": "json_object",
+            "debug_kind": "str",
+            "data_kind": "NoneType",
+            "debug_chars": 6,
+            "debug_fingerprint": "87e70fd1bb7a907a"
+          }
+        ],
+        "site_client_cookie_present": true,
+        "successful_retail_platforms": 3,
+        "contributing_retail_platforms": 2,
+        "wholesale_offers_count": 0
       }
     ],
     "kua3b": [
@@ -2574,6 +2636,74 @@
             "state": "unclassified_failure",
             "request_ms": 1463,
             "token_age_s": 8.0,
+            "response_kind": "json_object",
+            "debug_kind": "str",
+            "data_kind": "NoneType",
+            "debug_chars": 6,
+            "debug_fingerprint": "87e70fd1bb7a907a"
+          }
+        ],
+        "site_client_cookie_present": true,
+        "successful_retail_platforms": 2,
+        "contributing_retail_platforms": 1,
+        "wholesale_offers_count": 0
+      },
+      {
+        "attempted_at": "2026-10-21T05:02:41+00:00",
+        "outcome": "success",
+        "quality": "partial",
+        "offers_count": 4,
+        "successful_channels": 2,
+        "attempted_channels": 5,
+        "channel_outcomes": [
+          {
+            "id": 30,
+            "coin_no": "yxb",
+            "state": "ok",
+            "returned": 0,
+            "accepted": 0,
+            "request_ms": 1212,
+            "token_age_s": 0.0
+          },
+          {
+            "id": 17,
+            "coin_no": "yxb",
+            "state": "ok",
+            "returned": 4,
+            "accepted": 4,
+            "request_ms": 2110,
+            "token_age_s": 1.71
+          },
+          {
+            "id": 40,
+            "coin_no": "yxb",
+            "state": "unclassified_failure",
+            "request_ms": 1181,
+            "token_age_s": 4.32,
+            "response_kind": "json_object",
+            "debug_kind": "str",
+            "data_kind": "NoneType",
+            "debug_chars": 6,
+            "debug_fingerprint": "87e70fd1bb7a907a"
+          },
+          {
+            "id": 44,
+            "coin_no": "yxb",
+            "state": "unclassified_failure",
+            "request_ms": 1121,
+            "token_age_s": 6.0,
+            "response_kind": "json_object",
+            "debug_kind": "str",
+            "data_kind": "NoneType",
+            "debug_chars": 6,
+            "debug_fingerprint": "87e70fd1bb7a907a"
+          },
+          {
+            "id": 44,
+            "coin_no": "yxbpf",
+            "state": "unclassified_failure",
+            "request_ms": 1158,
+            "token_age_s": 7.62,
             "response_kind": "json_object",
             "debug_kind": "str",
             "data_kind": "NoneType",
@@ -3590,6 +3720,74 @@
             "state": "unclassified_failure",
             "request_ms": 1517,
             "token_age_s": 8.31,
+            "response_kind": "json_object",
+            "debug_kind": "str",
+            "data_kind": "NoneType",
+            "debug_chars": 6,
+            "debug_fingerprint": "87e70fd1bb7a907a"
+          }
+        ],
+        "site_client_cookie_present": true,
+        "successful_retail_platforms": 2,
+        "contributing_retail_platforms": 1,
+        "wholesale_offers_count": 0
+      },
+      {
+        "attempted_at": "2026-10-21T05:02:57+00:00",
+        "outcome": "success",
+        "quality": "partial",
+        "offers_count": 4,
+        "successful_channels": 2,
+        "attempted_channels": 5,
+        "channel_outcomes": [
+          {
+            "id": 30,
+            "coin_no": "yxb",
+            "state": "ok",
+            "returned": 0,
+            "accepted": 0,
+            "request_ms": 1179,
+            "token_age_s": 0.0
+          },
+          {
+            "id": 17,
+            "coin_no": "yxb",
+            "state": "ok",
+            "returned": 4,
+            "accepted": 4,
+            "request_ms": 2185,
+            "token_age_s": 1.68
+          },
+          {
+            "id": 40,
+            "coin_no": "yxb",
+            "state": "unclassified_failure",
+            "request_ms": 1342,
+            "token_age_s": 4.36,
+            "response_kind": "json_object",
+            "debug_kind": "str",
+            "data_kind": "NoneType",
+            "debug_chars": 6,
+            "debug_fingerprint": "87e70fd1bb7a907a"
+          },
+          {
+            "id": 44,
+            "coin_no": "yxb",
+            "state": "unclassified_failure",
+            "request_ms": 1565,
+            "token_age_s": 6.21,
+            "response_kind": "json_object",
+            "debug_kind": "str",
+            "data_kind": "NoneType",
+            "debug_chars": 6,
+            "debug_fingerprint": "87e70fd1bb7a907a"
+          },
+          {
+            "id": 44,
+            "coin_no": "yxbpf",
+            "state": "unclassified_failure",
+            "request_ms": 1115,
+            "token_age_s": 8.27,
             "response_kind": "json_object",
             "debug_kind": "str",
             "data_kind": "NoneType",
