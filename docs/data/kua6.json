@@ -2044,6 +2044,93 @@
           "ratio_wan_per_cny": 89.6655
         }
       }
+    },
+    {
+      "observed_at": "2026-10-24T16:06:24+00:00",
+      "quality": "usable",
+      "source": "yxdr",
+      "market": "listed_asks",
+      "region": "kua6",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua6",
+      "site_client_cookie_present": true,
+      "successful_channels": 3,
+      "attempted_channels": 5,
+      "successful_retail_platforms": 3,
+      "contributing_retail_platforms": 2,
+      "failed_channels": 2,
+      "channel_outcomes": [
+        {
+          "id": 30,
+          "coin_no": "yxb",
+          "state": "ok",
+          "returned": 0,
+          "accepted": 0,
+          "request_ms": 980,
+          "token_age_s": 0.0
+        },
+        {
+          "id": 17,
+          "coin_no": "yxb",
+          "state": "ok",
+          "returned": 4,
+          "accepted": 4,
+          "request_ms": 980,
+          "token_age_s": 1.48
+        },
+        {
+          "id": 40,
+          "coin_no": "yxb",
+          "state": "ok",
+          "returned": 35,
+          "accepted": 35,
+          "request_ms": 1436,
+          "token_age_s": 2.96
+        },
+        {
+          "id": 44,
+          "coin_no": "yxb",
+          "state": "unclassified_failure",
+          "request_ms": 994,
+          "token_age_s": 4.9,
+          "response_kind": "json_object",
+          "debug_kind": "str",
+          "data_kind": "NoneType",
+          "debug_chars": 6,
+          "debug_fingerprint": "87e70fd1bb7a907a"
+        },
+        {
+          "id": 44,
+          "coin_no": "yxbpf",
+          "state": "unclassified_failure",
+          "request_ms": 1000,
+          "token_age_s": 6.39,
+          "response_kind": "json_object",
+          "debug_kind": "str",
+          "data_kind": "NoneType",
+          "debug_chars": 6,
+          "debug_fingerprint": "87e70fd1bb7a907a"
+        }
+      ],
+      "wholesale_observation": null,
+      "best_ratio": 92.4994,
+      "offers_count": 39,
+      "depth": {
+        "30000": {
+          "target_wan": 30000,
+          "quoted_cny": 325.13,
+          "ratio_wan_per_cny": 92.2712
+        },
+        "100000": {
+          "target_wan": 100000,
+          "quoted_cny": 1095.79,
+          "ratio_wan_per_cny": 91.258
+        },
+        "120000": {
+          "target_wan": 120000,
+          "quoted_cny": 1321.08,
+          "ratio_wan_per_cny": 90.8348
+        }
+      }
     }
   ]
 }
