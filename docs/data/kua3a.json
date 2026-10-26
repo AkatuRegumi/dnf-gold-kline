@@ -2225,6 +2225,96 @@
           "ratio_wan_per_cny": 89.4259
         }
       }
+    },
+    {
+      "observed_at": "2026-10-26T23:55:53+00:00",
+      "quality": "partial",
+      "source": "yxdr",
+      "market": "listed_asks",
+      "region": "kua3a",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua3a",
+      "site_client_cookie_present": true,
+      "successful_channels": 2,
+      "attempted_channels": 5,
+      "successful_retail_platforms": 2,
+      "contributing_retail_platforms": 1,
+      "failed_channels": 3,
+      "channel_outcomes": [
+        {
+          "id": 30,
+          "coin_no": "yxb",
+          "state": "ok",
+          "returned": 0,
+          "accepted": 0,
+          "request_ms": 1083,
+          "token_age_s": 0.0
+        },
+        {
+          "id": 17,
+          "coin_no": "yxb",
+          "state": "ok",
+          "returned": 4,
+          "accepted": 4,
+          "request_ms": 1987,
+          "token_age_s": 1.58
+        },
+        {
+          "id": 40,
+          "coin_no": "yxb",
+          "state": "unclassified_failure",
+          "request_ms": 1062,
+          "token_age_s": 4.07,
+          "response_kind": "json_object",
+          "debug_kind": "str",
+          "data_kind": "NoneType",
+          "debug_chars": 6,
+          "debug_fingerprint": "87e70fd1bb7a907a"
+        },
+        {
+          "id": 44,
+          "coin_no": "yxb",
+          "state": "unclassified_failure",
+          "request_ms": 1437,
+          "token_age_s": 5.63,
+          "response_kind": "json_object",
+          "debug_kind": "str",
+          "data_kind": "NoneType",
+          "debug_chars": 6,
+          "debug_fingerprint": "87e70fd1bb7a907a"
+        },
+        {
+          "id": 44,
+          "coin_no": "yxbpf",
+          "state": "unclassified_failure",
+          "request_ms": 1059,
+          "token_age_s": 7.57,
+          "response_kind": "json_object",
+          "debug_kind": "str",
+          "data_kind": "NoneType",
+          "debug_chars": 6,
+          "debug_fingerprint": "87e70fd1bb7a907a"
+        }
+      ],
+      "wholesale_observation": null,
+      "best_ratio": 88.2223,
+      "offers_count": 4,
+      "depth": {
+        "30000": {
+          "target_wan": 30000,
+          "quoted_cny": 340.05,
+          "ratio_wan_per_cny": 88.2223
+        },
+        "100000": {
+          "target_wan": 100000,
+          "quoted_cny": 1133.5,
+          "ratio_wan_per_cny": 88.2223
+        },
+        "120000": {
+          "target_wan": 120000,
+          "quoted_cny": 1363.1,
+          "ratio_wan_per_cny": 88.0346
+        }
+      }
     }
   ]
 }
