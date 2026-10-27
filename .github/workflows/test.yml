@@ -19,3 +19,4 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check playwright
           python tests/browser_chart_hover.py
+
