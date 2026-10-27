@@ -12,8 +12,6 @@ from datetime import datetime, timezone
 import json
 import time
 
-from playwright.sync_api import TimeoutError as BrowserTimeout, sync_playwright
-
 from collector.collect import DATA_DIR, pick_regions, regions, save_attempt, save_sample
 from collector.market import BASE, summarize
 from tools.probe_yxdr_dom import EXTRACT_DOM, parse_rows
@@ -90,6 +88,7 @@ def snapshot_from_dom(region: dict, capture: dict, *,
 
 
 def collect_browser(region: dict, browser) -> dict:
+    from playwright.sync_api import TimeoutError as BrowserTimeout
     url = region["source_url"]
     if not url.startswith(BASE + "/bijiaqi/dnf/youxibi/"):
         raise ValueError("Unexpected upstream page")
@@ -124,6 +123,7 @@ def collect_browser(region: dict, browser) -> dict:
 
 
 def run(selected: list[dict], data_dir=DATA_DIR) -> tuple[int, int]:
+    from playwright.sync_api import sync_playwright
     passed, failed = 0, 0
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(channel="chrome", headless=True)
@@ -162,6 +162,7 @@ def main() -> None:
     from pathlib import Path
     selected = pick_regions(options, args.region)
     if args.dry_run:
+        from playwright.sync_api import sync_playwright
         if len(selected) != 1:
             parser.error("--dry-run requires exactly one specific region")
         with sync_playwright() as playwright:
