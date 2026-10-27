@@ -1,6 +1,10 @@
 name: Tests
 on:
   push:
+    # Quote-only commits happen up to 72 times/day after hourly capture.
+    # Keep code coverage while avoiding a full Chrome CI run per data update.
+    paths-ignore:
+      - 'docs/data/**'
   pull_request:
 permissions:
   contents: read
