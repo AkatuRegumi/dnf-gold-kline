@@ -24,4 +24,4 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         continue-on-error: true
         timeout-minutes: 3
-        run: python -m tools.probe_yxdr_dom --region kua2 --min-platforms 2
+        run: python -m collector.browser_collect --region kua2 --dry-run
