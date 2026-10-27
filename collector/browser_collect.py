@@ -156,9 +156,28 @@ def main() -> None:
                         choices=["scheduled", "all", "group0", "group1", "group2"] +
                         [region["id"] for region in options])
     parser.add_argument("--data-dir", type=str, default=str(DATA_DIR))
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Read one selected region without writing market history")
     args = parser.parse_args()
     from pathlib import Path
     selected = pick_regions(options, args.region)
+    if args.dry_run:
+        if len(selected) != 1:
+            parser.error("--dry-run requires exactly one specific region")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(channel="chrome", headless=True)
+            try:
+                sample = collect_browser(selected[0], browser)
+            finally:
+                browser.close()
+        print("YXDR_BROWSER_DRY_RUN " + json.dumps({
+            "region": sample["region"], "quality": sample["quality"],
+            "offers_count": sample["offers_count"],
+            "platform_counts": sample["rendered_observation"]["platform_counts"],
+            "excluded_mixed": sample["rendered_observation"]["ambiguous_category_rows"],
+            "best_ratio": sample["best_ratio"],
+        }, ensure_ascii=False), flush=True)
+        raise SystemExit(0 if sample["quality"] == "usable" else 2)
     print("browser-rendered regions: " + ", ".join(r["id"] for r in selected), flush=True)
     passed, failed = run(selected, Path(args.data_dir))
     print(f"browser regions: saved={passed}, failed={failed}", flush=True)
