@@ -326,7 +326,7 @@ def run(selected: list[dict], data_dir: Path = DATA_DIR) -> tuple[int, int]:
 
 
 def pick_regions(options: list[dict], requested: str, now: datetime | None = None) -> list[dict]:
-    """Three staggered groups, each polled twice per UTC day at 4-hour intervals."""
+    """Three staggered groups, each scheduled once per UTC hour."""
     if requested == "all":
         return options
     if requested in ("group0", "group1", "group2"):
@@ -334,8 +334,9 @@ def pick_regions(options: list[dict], requested: str, now: datetime | None = Non
         return [item for i, item in enumerate(options) if i % 3 == slot]
     if requested == "scheduled":
         # Manual/push fallback only; scheduled Actions pin groups to cron identity.
+        # UTC minutes :07, :27 and :47 correspond to groups 0, 1 and 2.
         stamp = now if now is not None else datetime.now(timezone.utc)
-        slot = (stamp.astimezone(timezone.utc).hour // 4) % 3
+        slot = stamp.astimezone(timezone.utc).minute // 20
         return [item for i, item in enumerate(options) if i % 3 == slot]
     return [item for item in options if item["id"] == requested]
 

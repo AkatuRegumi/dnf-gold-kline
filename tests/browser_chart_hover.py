@@ -42,6 +42,7 @@ def main():
             assert page.locator("#chart-hover").is_visible()
             hover_text = page.locator("#chart-hover").inner_text()
             assert "开盘" in hover_text and "收盘" in hover_text and "合格采样" in hover_text, hover_text
+            assert "首笔" in hover_text and "末笔" in hover_text, hover_text
             page.locator('#chart-mode button[data-mode="observed"]').click()
             assert not page.locator("#period").is_visible(), "period is only meaningful for K-line candles"
             page.mouse.move(3, 3)

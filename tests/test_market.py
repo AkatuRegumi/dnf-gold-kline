@@ -38,13 +38,13 @@ class MarketTest(unittest.TestCase):
         from datetime import datetime, timezone
         opts = regions()
         groups = []
-        for hour in (0, 4, 8):
-            selected = pick_regions(opts, "scheduled", datetime(2026, 10, 11, hour, tzinfo=timezone.utc))
+        for minute in (7, 27, 47):
+            selected = pick_regions(opts, "scheduled", datetime(2026, 10, 11, 0, minute, tzinfo=timezone.utc))
             self.assertEqual(len(selected), 3)
             groups.extend(r["id"] for r in selected)
         self.assertCountEqual(groups, [r["id"] for r in opts])
-        next_slot = pick_regions(opts, "scheduled", datetime(2026, 10, 11, 12, tzinfo=timezone.utc))
-        self.assertEqual(next_slot, pick_regions(opts, "scheduled", datetime(2026, 10, 11, 0, tzinfo=timezone.utc)))
+        next_slot = pick_regions(opts, "scheduled", datetime(2026, 10, 11, 12, 7, tzinfo=timezone.utc))
+        self.assertEqual(next_slot, pick_regions(opts, "scheduled", datetime(2026, 10, 11, 0, 7, tzinfo=timezone.utc)))
         self.assertEqual(pick_regions(opts, "all"), opts)
         self.assertEqual([r["id"] for r in pick_regions(opts, "kua8")], ["kua8"])
 
