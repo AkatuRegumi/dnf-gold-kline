@@ -87,6 +87,7 @@ const qualified=s=>{
  return true; // Historical samples without breakdown retain their stored assessment.
 };
 const fmtTime=stamp=>new Date(stamp).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
+const localHour=stamp=>new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Shanghai",hour:"2-digit",hourCycle:"h23"}).format(new Date(stamp));
 const fmtRatio=s=>Number.isFinite(Number(s?.best_ratio))?Number(s.best_ratio).toFixed(2):"—";
 const localDate=stamp=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Shanghai",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(stamp));
 function key(stamp){
@@ -115,11 +116,15 @@ function build(){
    if(!reliable||!Number.isFinite(ratio)||ratio<=0)continue;
    const k=key(s.observed_at);
    if(!groups.has(k))groups.set(k,[]);
-   groups.get(k).push(ratio);
+   groups.get(k).push({ratio,at:s.observed_at});
  }
- return [...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([date,v])=>({
-   date:date,open:v[0],high:Math.max(...v),low:Math.min(...v),close:v[v.length-1],n:v.length
- }));
+ return [...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([date,v])=>{
+   const values=v.map(item=>item.ratio);
+   return {date,open:values[0],high:Math.max(...values),low:Math.min(...values),
+     close:values[values.length-1],n:values.length,
+     firstAt:v[0].at,lastAt:v[v.length-1].at,
+     midnightHourObserved:kind!=="day"||localHour(v[0].at)==="00"};
+ });
 }
 function render(){
  const canvas=get("chart"),ctx=canvas.getContext("2d"),width=canvas.clientWidth,height=canvas.clientHeight;
@@ -151,7 +156,7 @@ function render(){
    else{ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xx,y(d.high));ctx.lineTo(xx,y(d.low));ctx.stroke();const yy=Math.min(y(d.open),y(d.close)),hh=Math.max(2,Math.abs(y(d.close)-y(d.open)));ctx.fillRect(xx-candleWidth/2,yy,candleWidth,hh);}
    const frequency=Math.max(1,Math.ceil(data.length/7));if(i%frequency===0||i===data.length-1){ctx.fillStyle="#9aafc6";ctx.textAlign="center";ctx.fillText(d.observed?d.date.slice(5,16):d.date.slice(5),xx,height-14);}
  });
- const describe=d=>d.observed?(d.date+" · "+d.close.toFixed(2)+" 万/元 · "+(d.reliable?"合格":"低覆盖")+" · "+d.sourceOffers+" 条挂牌"):d.date+" 开 "+d.open.toFixed(2)+" / 高 "+d.high.toFixed(2)+" / 低 "+d.low.toFixed(2)+" / 收 "+d.close.toFixed(2)+" 万/元 · "+d.n+" 次合格采样";
+ const describe=d=>d.observed?(d.date+" · "+d.close.toFixed(2)+" 万/元 · "+(d.reliable?"合格":"低覆盖")+" · "+d.sourceOffers+" 条挂牌"):d.date+" 开 "+d.open.toFixed(2)+" / 高 "+d.high.toFixed(2)+" / 低 "+d.low.toFixed(2)+" / 收 "+d.close.toFixed(2)+" 万/元 · "+d.n+" 次合格采样 · 首笔 "+fmtTime(d.firstAt)+(d.midnightHourObserved?"":"（非00点段）");
  const last=data[data.length-1],defaultReadout=describe(last);
  tip.textContent=defaultReadout;
  let hoveredIndex=null;
@@ -180,7 +185,10 @@ function render(){
      d.date+"\n开盘 "+d.open.toFixed(2)+"    最高 "+d.high.toFixed(2)+
        "\n最低 "+d.low.toFixed(2)+"    收盘 "+d.close.toFixed(2)+
        "\n合格采样 "+d.n+" 次"+
-       "\n单位：万金币/元（挂牌报价）";
+       "\n首笔 "+fmtTime(d.firstAt)+
+       "\n末笔 "+fmtTime(d.lastAt)+
+       (d.midnightHourObserved?"":"\n注意：缺少北京时间00点段合格采样")+
+       "\n单位：万金币/元（采样挂牌报价）";
    hover.hidden=false;
    // Measure after showing the popup; keep it inside the chart on narrow screens.
    const popupWidth=hover.offsetWidth,popupHeight=hover.offsetHeight;
@@ -373,7 +381,7 @@ get("chart-mode").addEventListener("click",e=>{
  get("chart-mode").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
  get("chart-note").textContent=chartMode==="observed"?
    "橙色采样点代表覆盖不足，绿色代表合格；虚线连接的是离散挂牌快照，不是连续成交行情。此视图不生成 K 线或大额深度估算。":
-   "合格 K 线仅采用至少两个有实际挂单的独立普通金币平台、至少五条有效挂牌的快照；单次仅画点，不制造蜡烛图。";
+   "采样 K 线按北京时间00:00划分自然日；开盘/收盘为该时段首末合格采样价，悬停可看真实时间，缺少00点段会标记。至少两个独立普通币平台和五条有效挂牌；单次仅画点。";
  const entry=availableRegions.find(x=>x.id===activeRegion);
  if(entry)get("chart-title").textContent=entry.name+(chartMode==="observed"?" · 采样观察走势":"金币报价 K 线");
  get("chart").setAttribute("aria-label",chartMode==="observed"?"挂牌报价离散采样观察走势；可用左右方向键查看快照":"金币报价合格 K 线；可用左右方向键查看日期");
