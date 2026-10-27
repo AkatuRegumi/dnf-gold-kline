@@ -28,9 +28,11 @@ GitHub Pages：在 Settings → Pages 中设为 `main` 分支下的 `/docs`。�
 
 ```bash
 python -m unittest discover -s tests -v
-python -m collector.collect --region kua2
-python -m collector.collect --region scheduled
-python -m collector.collect --region all
+python -m pip install playwright
+python -m collector.browser_collect --region kua2 --dry-run
+python -m collector.browser_collect --region kua2
+python -m collector.browser_collect --region scheduled
+python -m collector.browser_collect --region all
 python -m http.server 8000 -d docs
 ```
 
