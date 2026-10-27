@@ -20,8 +20,3 @@ jobs:
           python -m pip install --disable-pip-version-check playwright
           python tests/browser_chart_hover.py
 
-      - name: Probe cross-two YXDR rendered HTML once (diagnostic, non-blocking)
-        if: ${{ github.event_name == 'pull_request' }}
-        continue-on-error: true
-        timeout-minutes: 3
-        run: python -m collector.browser_collect --region kua2 --dry-run
