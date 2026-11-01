@@ -11,6 +11,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import time
+from pathlib import Path
 
 from collector.collect import DATA_DIR, pick_regions, regions, save_attempt, save_sample
 from collector.market import BASE, summarize
@@ -122,6 +123,37 @@ def collect_browser(region: dict, browser) -> dict:
         context.close()
 
 
+def captured_this_hour(region_id: str, data_dir: Path = DATA_DIR, *,
+                       now: datetime | None = None) -> bool:
+    """Idempotent hourly *real* snapshots across backup cron and external dispatch.
+
+    An earlier capture in the current UTC hour means we do not open YXDR again.
+    UTC and Beijing share minute/hour slot boundaries (the latter is UTC+8).
+    Failed attempts do not count as quotes and are still eligible to retry.
+    """
+    path = data_dir / f"{region_id}.json"
+    if not path.exists():
+        return False
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if doc.get("region") != region_id or not isinstance(doc.get("samples"), list):
+        raise ValueError("Invalid region history; cannot safely deduplicate")
+    rows = doc["samples"]
+    if not rows:
+        return False
+    at = now if now is not None else datetime.now(timezone.utc)
+    if at.tzinfo is None or at.utcoffset() is None:
+        raise ValueError("Hour window must be timezone-aware")
+    slot = at.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    latest_stamp = rows[-1].get("observed_at")
+    if not isinstance(latest_stamp, str):
+        raise ValueError("Invalid latest sample timestamp")
+    latest = datetime.fromisoformat(latest_stamp.replace("Z", "+00:00"))
+    if latest.tzinfo is None or latest.utcoffset() is None:
+        raise ValueError("Stored snapshot timestamp lacks timezone")
+    return latest.astimezone(timezone.utc).replace(
+        minute=0, second=0, microsecond=0) == slot
+
+
 def run(selected: list[dict], data_dir=DATA_DIR) -> tuple[int, int]:
     from playwright.sync_api import sync_playwright
     passed, failed = 0, 0
@@ -129,9 +161,13 @@ def run(selected: list[dict], data_dir=DATA_DIR) -> tuple[int, int]:
         browser = playwright.chromium.launch(channel="chrome", headless=True)
         try:
             for i, region in enumerate(selected):
-                if i:
-                    time.sleep(2)
                 try:
+                    if captured_this_hour(region["id"], data_dir):
+                        print(f"[{region['id']}] already captured this UTC hour; "
+                              "skip browser request (no new quote)", flush=True)
+                        continue
+                    if i:
+                        time.sleep(2)
                     sample = collect_browser(region, browser)
                     save_sample(region["id"], sample, data_dir)
                     save_attempt(region["id"], "success", data_dir,
@@ -159,7 +195,6 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true",
                         help="Read one selected region without writing market history")
     args = parser.parse_args()
-    from pathlib import Path
     selected = pick_regions(options, args.region)
     if args.dry_run:
         from playwright.sync_api import sync_playwright
@@ -182,7 +217,9 @@ def main() -> None:
     print("browser-rendered regions: " + ", ".join(r["id"] for r in selected), flush=True)
     passed, failed = run(selected, Path(args.data_dir))
     print(f"browser regions: saved={passed}, failed={failed}", flush=True)
-    if passed == 0:
+    # A completely duplicate external+backup run is healthy and writes nothing.
+    # Still fail when every actual capture attempt failed.
+    if passed == 0 and failed > 0:
         raise SystemExit("No rendered quotes saved; existing history preserved.")
 
 
