@@ -296,11 +296,10 @@ async function fetchAll(){
     for(const r of regions){const op=document.createElement("option");
       op.value=r.id;op.textContent=r.name;select.appendChild(op);}
     const requested=new URLSearchParams(location.search).get("region");
-    const selected=regions.some(r=>r.id===current.region)?current.region:
-      (regions.some(r=>r.id===requested)?requested:(data.default_region||"kua2"));
-    if(requested&&regions.some(r=>r.id===requested)&&!current.loaded)current.region=requested;
+    if(!current.loaded && requested && regions.some(r=>r.id===requested))current.region=requested;
+    if(!regions.some(r=>r.id===current.region))current.region=data.default_region||"kua2";
     current.loaded=true;
-    selectRegion(selected,false);
+    selectRegion(current.region,false);
     setText("asof","页面更新 "+new Date().toLocaleTimeString("zh-CN",
       {timeZone:"Asia/Shanghai",hour12:false,hour:"2-digit",minute:"2-digit"}));
   }catch(err){
