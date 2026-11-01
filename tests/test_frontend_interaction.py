@@ -22,7 +22,6 @@ class FrontendInteractionTest(unittest.TestCase):
     def test_observed_vs_strict_candle_and_scope(self):
         self.assertIn("M.observations(samples)", JS)
         self.assertIn("M.candles(samples,period)", JS)
-        self.assertIn("data:bars.map", JS) if False else None
         self.assertIn('b.n<2?"-":[b.o,b.c,b.l,b.h]', JS)
         self.assertIn('type:"scatter"', JS)
         self.assertIn("midnightObserved", JS)
