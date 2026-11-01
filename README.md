@@ -27,7 +27,7 @@
 
 GitHub Pages：在 Settings → Pages 中设为 `main` 分支下的 `/docs`。仓库启用 Actions，工作流需要 contents:write 以提交真实行情记录。仅采集脚本或跨区配置更新时自动进行一次采样，平时每小时分三组错峰运行、每次轮询三个跨区。
 
-## 本地运行（Python 3.11+，无需外部依赖）
+## 本地运行（Python 3.11+；浏览器采集需安装 Playwright）
 
 ```bash
 python -m unittest discover -s tests -v
