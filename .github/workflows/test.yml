@@ -17,8 +17,11 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m unittest discover -s tests -v
-      - name: Check embedded chart JavaScript syntax
-        run: python -c "from pathlib import Path; p=Path('docs/index.html').read_text(encoding='utf-8'); Path('/tmp/dnf-chart.js').write_text(p.split('<script>',1)[1].split('</script>',1)[0],encoding='utf-8')" && node --check /tmp/dnf-chart.js
+      - name: Validate standalone quote model, chart code and hourly data contracts
+        run: |
+          node --check docs/market-data.js
+          node --check docs/terminal.js
+          node tests/frontend_data_contract.js
       - name: Browser interaction smoke test (local-only static site)
         run: |
           python -m pip install --disable-pip-version-check playwright
