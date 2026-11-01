@@ -7,7 +7,7 @@
 - GitHub Pages：<https://akaturegumi.github.io/dnf-gold-kline/>
 - 数据来源：[游戏达人比价网](https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2)，公开挂牌（并非真实成交价）。
 - 跨区：跨一、跨二、跨三 A/B、跨四、跨五、跨六、跨七、跨八。完整 ID、链接在 `docs/data/regions.json` 中集中管理。
-- 采集：GitHub Actions 每小时分别在 UTC :07、:27、:47 启动三个不同跨区组（九个跨区计划每天各24次）。对应北京时间每小时的 :07、:27、:47，不会同时打开九个网页。按触发的 cron 表达式固定选择三个跨区，避免 Actions 延迟启动后选择错组。**正式入口改为 Playwright Chrome 渲染游戏达人原网页，从 `#result_m .list_m .body` 的 DOM 读取金额、金币数量与提供平台；不使用 OCR、不绕过平台接口、不依赖个人 Cookie，不保证 Actions 准点执行。**一个跨区失败不会影响其他跨区，失败不会编造数据。
+- 采集：现有 GitHub Actions 每小时 UTC :07、:27、:47 各抓三个跨区（九跨区每天每小时各一次为计划值），实际GitHub计划触发可能漏跑。**新增 Cloudflare Workers 每小时 :05 触发一次 GitHub `workflow_dispatch(region=all)` 的部署模板，作为后续的主时钟；需要仓库维护者亲自设置 Cloudflare Secret 和启用开关，未部署前不影响现有 cron。**正式采集仍由 Playwright Chrome 渲染原网页DOM，不使用 OCR、不绕过平台接口、不依赖个人 Cookie。Cloudflare验证成功后再关闭 GitHub 三个旧 cron，避免双重调度。
 - 网页 DOM 中的 7881 报价可能混合普通金币与批发金币，暂时仅作为带来源计数的 `rendered_observation` 另存；正式K线和库存深度只使用已核实的普通币平台 UU898、DD373、YXB321（若有挂单）。待有可靠的普通/批发 DOM 区分类字段后，才能把 7881 纳入正式价格。此口径比网页“全部展示价”保守，不等于全平台最高价。
 - 线上浏览器无写入校验：`python -m collector.browser_collect --region kua2 --dry-run`。原接口采集器 `python -m collector.collect` 作为手工诊断保留，正式工作流不会同时运行两种抓取。
 - 历史数据：`docs/data/kua1.json` 至 `docs/data/kua8.json`（包括 `kua3a`/`kua3b`）。原先跨二的三条快照原样迁移到 `kua2.json`。
@@ -23,6 +23,12 @@
 - 大额报价：页面展示公开挂单深度模型，假设可分拆下单，实际可能受限于卖家库存、手续费和数量限制。
 - 没有账号密码、交易功能、实时成交量或虚构历史数据。
 
+## 外部每小时调度（Cloudflare）
+
+[查看分阶段部署与密钥配置步骤](cloudflare/README.md)。Worker 代码 `cloudflare/hourly-dispatch.mjs`，配置 `cloudflare/wrangler.jsonc`，默认 `DISPATCH_ENABLED=false`。**提交代码不会自动部署Worker，也不代表Cloudflare已开启。**
+
+新采集器每次进入一个跨区前都会检查这一跨区本 UTC 小时是否已有成功保存的真实快照：已有则不打开游戏达人页面，也不写第二条。这是为了在旧GitHub cron与新Cloudflare Cron并行验证期间防止重复数据；采集失败未形成行情时仍可在同小时重试。每次成功保存的历史仍按真实 `observed_at` 归类，不制造缺失小时的行情。
+
 ## 部署
 
 GitHub Pages：在 Settings → Pages 中设为 `main` 分支下的 `/docs`。仓库启用 Actions，工作流需要 contents:write 以提交真实行情记录。仅采集脚本或跨区配置更新时自动进行一次采样，平时每小时分三组错峰运行、每次轮询三个跨区。
@@ -34,6 +40,7 @@ python -m unittest discover -s tests -v
 node --check docs/market-data.js
 node --check docs/terminal.js
 node tests/frontend_data_contract.js
+node --test tests/cloudflare_dispatch.test.mjs
 python -m pip install playwright
 python -m collector.browser_collect --region kua2 --dry-run
 python -m collector.browser_collect --region kua2
