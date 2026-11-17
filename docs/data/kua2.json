@@ -7825,6 +7825,74 @@
           "ratio_wan_per_cny": 96.2306
         }
       }
+    },
+    {
+      "observed_at": "2026-11-17T23:02:39+00:00",
+      "region": "kua2",
+      "source_url": "https://www.yxdr.com/bijiaqi/dnf/youxibi/kua2",
+      "source": "yxdr",
+      "capture_method": "rendered_dom",
+      "market": "listed_asks",
+      "quality": "usable",
+      "successful_channels": 2,
+      "attempted_channels": 2,
+      "failed_channels": 0,
+      "successful_retail_platforms": 2,
+      "contributing_retail_platforms": 2,
+      "channel_outcomes": [
+        {
+          "id": 17,
+          "coin_no": "yxb",
+          "state": "ok",
+          "returned": 4,
+          "accepted": 4
+        },
+        {
+          "id": 40,
+          "coin_no": "yxb",
+          "state": "ok",
+          "returned": 31,
+          "accepted": 31
+        },
+        {
+          "id": 44,
+          "coin_no": "unknown",
+          "state": "mixed_category_unverified",
+          "returned": 19,
+          "accepted": 0
+        }
+      ],
+      "wholesale_observation": null,
+      "rendered_observation": {
+        "total_visible_rows": 54,
+        "validated_rows": 54,
+        "platform_counts": {
+          "17": 4,
+          "40": 31,
+          "44": 19
+        },
+        "ambiguous_category_rows": 19,
+        "top_displayed_ratio": 98.0
+      },
+      "best_ratio": 98.0,
+      "offers_count": 33,
+      "depth": {
+        "30000": {
+          "target_wan": 30000,
+          "quoted_cny": 309.65,
+          "ratio_wan_per_cny": 96.8823
+        },
+        "100000": {
+          "target_wan": 100000,
+          "quoted_cny": 1038.76,
+          "ratio_wan_per_cny": 96.2683
+        },
+        "120000": {
+          "target_wan": 120000,
+          "quoted_cny": 1248.72,
+          "ratio_wan_per_cny": 96.0984
+        }
+      }
     }
   ]
 }
