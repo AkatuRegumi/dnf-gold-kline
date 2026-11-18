@@ -66,7 +66,7 @@ class HourlyScheduleContractTest(unittest.TestCase):
         content = (ROOT / "collector" / "browser_collect.py").read_text(encoding="utf-8")
         self.assertIn('if captured_this_hour(region["id"], data_dir):', content)
         self.assertIn("continue\n", content)
-        self.assertIn("save_sample(region['id'], sample, data_dir)", content)
+        self.assertIn('save_sample(region["id"], sample, data_dir)', content)
 
     def test_high_volume_data_commits_do_not_trigger_full_browser_ci(self):
         content = TEST_WORKFLOW.read_text(encoding="utf-8")
