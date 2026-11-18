@@ -1,12 +1,17 @@
 name: Capture DNF gold quote
 on:
   schedule:
-    # Hourly per region: three disjoint groups at UTC :07, :27, :47.
-    # GitHub Actions may delay/miss a cron; never infer a quote at planned time.
-    # Select by the triggering cron identity, NOT delayed runner wall-clock time.
-    - cron: '7 * * * *'  # group0: kua1, kua3b, kua6
-    - cron: '27 * * * *' # group1: kua2, kua4, kua7
-    - cron: '47 * * * *' # group2: kua3a, kua5, kua8
+    # Two chances per UTC hour per disjoint group; each group still records
+    # at most one real quote per region per hour (see captured_this_hour).
+    # Backups improve odds when a scheduled GitHub event is dropped.
+    # GitHub can still miss BOTH events; this is not a guaranteed 6-8/day SLA.
+    # Select by cron identity, never by delayed runner wall-clock time.
+    - cron: '7 * * * *'  # group0 primary: kua1, kua3b, kua6
+    - cron: '17 * * * *' # group0 backup
+    - cron: '27 * * * *' # group1 primary: kua2, kua4, kua7
+    - cron: '37 * * * *' # group1 backup
+    - cron: '47 * * * *' # group2 primary: kua3a, kua5, kua8
+    - cron: '57 * * * *' # group2 backup
   workflow_dispatch:
     inputs:
       region:
@@ -48,9 +53,9 @@ jobs:
           selected="$REQUESTED_REGION"
           if [ "$EVENT_NAME" = "schedule" ]; then
             case "$EVENT_SCHEDULE" in
-              '7 * * * *') selected=group0 ;;
-              '27 * * * *') selected=group1 ;;
-              '47 * * * *') selected=group2 ;;
+              '7 * * * *'|'17 * * * *') selected=group0 ;;
+              '27 * * * *'|'37 * * * *') selected=group1 ;;
+              '47 * * * *'|'57 * * * *') selected=group2 ;;
               *) echo "Unknown schedule: $EVENT_SCHEDULE" >&2; exit 1 ;;
             esac
           fi
